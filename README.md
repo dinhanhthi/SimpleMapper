@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="public/logo_256.png" width="128" alt="SimpleMapper icon">
+<img src="assets/logo.png" width="128" alt="SimpleMapper icon">
 
 # SimpleMapper
 

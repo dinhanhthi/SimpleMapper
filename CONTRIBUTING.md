@@ -73,7 +73,8 @@ Never pass `-derivedDataPath` to local `xcodebuild` builds and tests. The defaul
 - `SimpleMapper/KeyDetector.swift`: Detect key (one key press, Input Monitoring).
 - `SimpleMapper/Updater.swift`: Sparkle updater.
 - `SimpleMapper/Info.plist`: Sparkle keys, merged into the generated Info.plist.
-- `SimpleMapper/logo.icon`: app icon.
+- `SimpleMapper/logo.icon`: app icon (Icon Composer; light background, glyph layer `logo_nobg.png`).
+- `assets/logo.png`: square logo for the README; the About panel uses the same artwork at 256 px.
 - `SimpleMapper/Assets.xcassets`: `MenuBarIcon` (menu bar template image) and `AboutLogo` (logo shown in the About panel).
 - `SimpleMapperTests/`: unit tests.
 - `scripts/`: dev, screenshots, measure and release scripts.
