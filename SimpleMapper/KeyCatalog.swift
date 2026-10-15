@@ -3,6 +3,21 @@ import Foundation
 /// Key picker categories, in the order of Karabiner-Elements' simple_modifications.json.
 enum Category: String, CaseIterable {
     case modifiers, controlsSymbols, arrows, letters, numbers, function, keypad, pc, international, japanese
+
+    var title: String {
+        switch self {
+        case .modifiers: "Modifiers"
+        case .controlsSymbols: "Controls & Symbols"
+        case .arrows: "Arrows"
+        case .letters: "Letters"
+        case .numbers: "Numbers"
+        case .function: "Function Keys"
+        case .keypad: "Keypad"
+        case .pc: "PC Keys"
+        case .international: "International"
+        case .japanese: "Japanese"
+        }
+    }
 }
 
 /// One remappable key. `usage` is `(usagePage << 32) | usageID`, the format hidutil expects.

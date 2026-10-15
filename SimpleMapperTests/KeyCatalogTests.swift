@@ -39,4 +39,11 @@ final class KeyCatalogTests: XCTestCase {
             XCTAssertFalse(KeyCatalog.all.filter { $0.category == category }.isEmpty, "\(category) is empty")
         }
     }
+
+    func testAcceptedUsage() {
+        XCTAssertEqual(KeyDetector.acceptedUsage(page: 7, usage: 0x64), 0x700000064)
+        XCTAssertNil(KeyDetector.acceptedUsage(page: 7, usage: 0x01))
+        XCTAssertEqual(KeyDetector.acceptedUsage(page: 0xFF, usage: 3), 0xFF00000003)
+        XCTAssertNil(KeyDetector.acceptedUsage(page: 0x0C, usage: 0xE9))
+    }
 }

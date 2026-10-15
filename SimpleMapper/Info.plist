@@ -9,5 +9,7 @@
 	<string></string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
+	<key>SUVerifyUpdateBeforeExtraction</key>
+	<true/>
 </dict>
 </plist>
