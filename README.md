@@ -22,7 +22,7 @@ Requires macOS 13 or later.
 
 ## Usage
 
-Click the keyboard icon in the menu bar:
+Click the SimpleMapper icon (the app logo) in the menu bar:
 
 - **From / To**: choose the key to remap and the key it should type, by category.
 - **Detect key**: press any key to identify it, then click Use as From, Use as To or Use this keyboard.

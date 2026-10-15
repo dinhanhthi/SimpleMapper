@@ -6,13 +6,17 @@ struct SimpleMapperApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        MenuBarExtra("SimpleMapper", systemImage: "keyboard") {
+        MenuBarExtra {
             MenuBarView(
                 model: appDelegate.model,
                 monitor: appDelegate.monitor,
                 detector: appDelegate.detector,
                 updater: appDelegate.updater
             )
+        } label: {
+            // Template silhouette of the app logo, so it follows the menu bar's light/dark tint.
+            Image("MenuBarIcon")
+                .accessibilityLabel("SimpleMapper")
         }
         .menuBarExtraStyle(.window)
     }
