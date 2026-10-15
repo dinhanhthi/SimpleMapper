@@ -26,3 +26,9 @@ GEMINI.md
 .serena/
 .mcp.json
 .github/copilot-instructions.md
+
+# Secrets (safety net)
+sparkle_private_key*
+*_sparkle_private_key*
+*.p12
+*.pem
