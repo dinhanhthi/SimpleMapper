@@ -1,0 +1,28 @@
+SimpleMapper.xcodeproj/
+release/
+.DS_Store
+xcuserdata/
+
+# Local docs (plans, context, memory, reviews), except the published guides
+docs/*
+!docs/RELEASING.md
+!docs/KEYS.md
+
+# AI tool files (.coding-friend/ stays tracked)
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+GEMINI.md
+.claude/
+.cursor/
+.cursorrules
+.cursorignore
+.windsurf/
+.windsurfrules
+.codex/
+.gemini/
+.aider*
+.continue/
+.serena/
+.mcp.json
+.github/copilot-instructions.md

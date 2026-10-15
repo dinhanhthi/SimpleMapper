@@ -1,0 +1,56 @@
+name: SimpleMapper
+options:
+  deploymentTarget:
+    macOS: "13.0"
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: 2.10.0
+settings:
+  base:
+    DEVELOPMENT_TEAM: 86H6CNLN4C
+    CODE_SIGN_STYLE: Automatic
+targets:
+  SimpleMapper:
+    type: application
+    platform: macOS
+    sources:
+      - SimpleMapper
+    dependencies:
+      - package: Sparkle
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dinh.thi.SimpleMapper
+        MARKETING_VERSION: 1.0.0
+        CURRENT_PROJECT_VERSION: 1
+        ENABLE_HARDENED_RUNTIME: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: logo
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: SimpleMapper/Info.plist
+        INFOPLIST_KEY_LSUIElement: YES
+        INFOPLIST_KEY_CFBundleDisplayName: SimpleMapper
+        SWIFT_VERSION: "5.0"
+      configs:
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Developer ID Application"
+  SimpleMapperTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - SimpleMapperTests
+    dependencies:
+      - target: SimpleMapper
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/SimpleMapper.app/Contents/MacOS/SimpleMapper"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+schemes:
+  SimpleMapper:
+    build:
+      targets:
+        SimpleMapper: all
+    test:
+      targets:
+        - SimpleMapperTests
