@@ -11,7 +11,8 @@ struct KeyboardDevice: Identifiable, Hashable, Codable {
     var id: String { "\(vendorID):\(productID):\(builtIn)" }
     var scope: Scope { .device(vendorID: vendorID, productID: productID, builtIn: builtIn) }
 
-    /// The Apple Silicon built-in keyboard has no vendor/product IDs (0 here); hidutil matches it by `Built-In`.
+    /// Built-in keyboards always get vendor/product 0 (Apple Silicon reports none, Intel reports Apple IDs),
+    /// so every Mac's built-in keyboard shares one scope; hidutil matches it by `Built-In`.
     static func keyboard(_ device: IOHIDDevice) -> KeyboardDevice? {
         func property(_ key: String) -> Any? { IOHIDDeviceGetProperty(device, key as CFString) }
         let vendorID = property(kIOHIDVendorIDKey) as? Int
@@ -19,7 +20,8 @@ struct KeyboardDevice: Identifiable, Hashable, Codable {
         let builtIn = (property("Built-In") as? Bool) ?? false
         guard builtIn || (vendorID != nil && productID != nil) else { return nil }
         let name = (property(kIOHIDProductKey) as? String) ?? (builtIn ? "Built-in Keyboard" : "Keyboard")
-        return KeyboardDevice(vendorID: vendorID ?? 0, productID: productID ?? 0, builtIn: builtIn, name: name)
+        if builtIn { return KeyboardDevice(vendorID: 0, productID: 0, builtIn: true, name: name) }
+        return KeyboardDevice(vendorID: vendorID ?? 0, productID: productID ?? 0, builtIn: false, name: name)
     }
 }
 

@@ -6,12 +6,12 @@ enum Scope: Codable, Hashable {
     case device(vendorID: Int, productID: Int, builtIn: Bool)
 }
 
-/// Applies one key mapping with `/usr/bin/hidutil property --set UserKeyMapping`.
+/// Applies key mappings with `/usr/bin/hidutil property --set UserKeyMapping`.
 enum Remapper {
     static let clearJSON = #"{"UserKeyMapping":[]}"#
 
-    static func mappingJSON(from: UInt64, to: UInt64) -> String {
-        json(["UserKeyMapping": [["HIDKeyboardModifierMappingSrc": from, "HIDKeyboardModifierMappingDst": to]]])
+    static func mappingJSON(_ pairs: [(from: UInt64, to: UInt64)]) -> String {
+        json(["UserKeyMapping": pairs.map { ["HIDKeyboardModifierMappingSrc": $0.from, "HIDKeyboardModifierMappingDst": $0.to] }])
     }
 
     /// `nil` for `.all`; built-in keyboards are matched by `Built-In`, others by vendor/product.
@@ -28,18 +28,43 @@ enum Remapper {
         return ["property", "--matching", matching, "--set", json]
     }
 
+    /// Global All list first, then the merged list of every previous or mapped keyboard (a stale one gets the All list).
+    /// `applied` is the keyboards with at least one enabled mapping.
+    static func applyCommands(_ settings: Settings, previous: Set<Scope>) -> (commands: [[String]], applied: Set<Scope>) {
+        let applied = Set(settings.keyboards.map(\.device.scope).filter { $0 != .all && !Settings.dedupe(settings.list(for: $0)).isEmpty })
+        let deviceCommands = sorted(previous.union(applied)).map { arguments(set: mappingJSON(settings.merged(for: $0)), scope: $0) }
+        return ([arguments(set: mappingJSON(Settings.dedupe(settings.all)), scope: .all)] + deviceCommands, applied)
+    }
+
+    /// Clears the global mapping, then every previous keyboard.
+    static func clearCommands(previous: Set<Scope>) -> [[String]] {
+        [arguments(set: clearJSON, scope: .all)] + sorted(previous).map { arguments(set: clearJSON, scope: $0) }
+    }
+
+    /// Runs every command in order. Returns the first error text or nil.
+    static func execute(_ commands: [[String]], runner: ([String]) -> String? = Remapper.run) -> String? {
+        commands.map(runner).compactMap { $0 }.first
+    }
+
     /// Clears the global and previous device mapping, then sets the new one. Returns error text or nil.
     static func apply(from: UInt64, to: UInt64, scope: Scope, previous: Scope?) -> String? {
-        let clearError = clear(previous: previous)
-        return run(arguments(set: mappingJSON(from: from, to: to), scope: scope)) ?? clearError
+        let previous: Set<Scope> = previous.map { [$0] } ?? []
+        return execute(clearCommands(previous: previous) + [arguments(set: mappingJSON([(from, to)]), scope: scope)])
     }
 
     /// Clears the global mapping and, when it was a device, the previous scope. Returns error text or nil.
     static func clear(previous: Scope?) -> String? {
-        let globalError = run(arguments(set: clearJSON, scope: .all))
-        guard let previous, previous != .all else { return globalError }
-        let previousError = run(arguments(set: clearJSON, scope: previous))
-        return globalError ?? previousError
+        execute(clearCommands(previous: previous.map { [$0] } ?? []))
+    }
+
+    /// Device scopes only, in a stable order: built-in first, then by vendor and product.
+    private static func sorted(_ scopes: Set<Scope>) -> [Scope] {
+        scopes.compactMap { scope -> (key: [Int], scope: Scope)? in
+            guard case let .device(vendorID, productID, builtIn) = scope else { return nil }
+            return ([builtIn ? 0 : 1, vendorID, productID], scope)
+        }
+        .sorted { $0.key.lexicographicallyPrecedes($1.key) }
+        .map(\.scope)
     }
 
     private static func json(_ object: Any) -> String {
@@ -47,7 +72,7 @@ enum Remapper {
         return String(decoding: data, as: UTF8.self)
     }
 
-    private static func run(_ arguments: [String]) -> String? {
+    static func run(_ arguments: [String]) -> String? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/hidutil")
         process.arguments = arguments
