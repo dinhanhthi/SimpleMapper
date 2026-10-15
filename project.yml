@@ -29,6 +29,7 @@ targets:
         INFOPLIST_FILE: SimpleMapper/Info.plist
         INFOPLIST_KEY_LSUIElement: YES
         INFOPLIST_KEY_CFBundleDisplayName: SimpleMapper
+        INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Anh-Thi Dinh"
         SWIFT_VERSION: "5.0"
       configs:
         Release:

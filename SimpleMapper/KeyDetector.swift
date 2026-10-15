@@ -56,7 +56,7 @@ final class KeyDetector: ObservableObject {
             return
         }
         isDetecting = true
-        // Swallow keys so Escape does not close the popover and Space/Return do not press the focused button.
+        // Swallow keys so Escape/Return/Space do not trigger window controls while detecting.
         eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp, .flagsChanged]) { _ in nil }
         timeoutTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: 10_000_000_000)

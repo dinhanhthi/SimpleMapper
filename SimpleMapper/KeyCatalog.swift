@@ -32,9 +32,6 @@ struct Key: Identifiable, Hashable {
 
 /// Keyboard page 0x07 keys plus `fn`, named as in Karabiner-Elements' key_code.hpp.
 enum KeyCatalog {
-    static let defaultFrom: UInt64 = 0x700000064 // non_us_backslash
-    static let defaultTo: UInt64 = 0x700000035 // grave_accent_and_tilde
-
     /// Japanese aliases come last so `key(usage:)` returns the primary name.
     static let all: [Key] = [
         Key(name: "caps_lock", label: "⇪ Caps Lock", usage: 0x700000039, category: .modifiers),

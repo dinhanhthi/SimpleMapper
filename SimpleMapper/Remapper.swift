@@ -46,17 +46,6 @@ enum Remapper {
         commands.map(runner).compactMap { $0 }.first
     }
 
-    /// Clears the global and previous device mapping, then sets the new one. Returns error text or nil.
-    static func apply(from: UInt64, to: UInt64, scope: Scope, previous: Scope?) -> String? {
-        let previous: Set<Scope> = previous.map { [$0] } ?? []
-        return execute(clearCommands(previous: previous) + [arguments(set: mappingJSON([(from, to)]), scope: scope)])
-    }
-
-    /// Clears the global mapping and, when it was a device, the previous scope. Returns error text or nil.
-    static func clear(previous: Scope?) -> String? {
-        execute(clearCommands(previous: previous.map { [$0] } ?? []))
-    }
-
     /// Device scopes only, in a stable order: built-in first, then by vendor and product.
     private static func sorted(_ scopes: Set<Scope>) -> [Scope] {
         scopes.compactMap { scope -> (key: [Int], scope: Scope)? in

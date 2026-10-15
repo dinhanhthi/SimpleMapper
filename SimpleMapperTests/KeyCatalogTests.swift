@@ -14,11 +14,6 @@ final class KeyCatalogTests: XCTestCase {
         }
     }
 
-    func testDefaults() {
-        XCTAssertEqual(KeyCatalog.key(usage: KeyCatalog.defaultFrom)?.name, "non_us_backslash")
-        XCTAssertEqual(KeyCatalog.key(usage: KeyCatalog.defaultTo)?.name, "grave_accent_and_tilde")
-    }
-
     func testLookupByUsage() {
         XCTAssertEqual(KeyCatalog.key(usage: 0x700000064)?.name, "non_us_backslash")
         XCTAssertEqual(KeyCatalog.key(usage: 0x700000035)?.name, "grave_accent_and_tilde")
