@@ -216,14 +216,23 @@ On ISO keyboards (with a key left of `1` and a key right of the left Shift), mac
 
 ## Equivalent command
 
-The default mapping (`non_us_backslash` to `grave_accent_and_tilde`, all keyboards) is the same as:
+Equivalent to what SimpleMapper sends to `hidutil` for your mappings (it uses decimal usages and sorted keys). First the All keyboards list is set globally (example: `caps_lock` to `escape`):
 
 ```sh
-hidutil property --set '{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000064,"HIDKeyboardModifierMappingDst":0x700000035}]}'
+hidutil property --set '{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x700000029}]}'
 ```
 
-Clear it with:
+Then, for each keyboard that has its own list, the merged list (the All list, with the keyboard's entries overriding the same From key and adding the others) is set for that keyboard only. Example for a keyboard with vendor ID 1452 and product ID 832 that also maps `right_command` to `right_control`:
+
+```sh
+hidutil property --matching '{"VendorID":1452,"ProductID":832,"PrimaryUsagePage":1,"PrimaryUsage":6}' --set '{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x700000029},{"HIDKeyboardModifierMappingSrc":0x7000000E7,"HIDKeyboardModifierMappingDst":0x7000000E4}]}'
+```
+
+The order matters: a global `--set` also overwrites the per-keyboard values, so the global command always runs first and the per-keyboard commands follow. Built-in keyboards are matched with `{"Built-In":1,"PrimaryUsagePage":1,"PrimaryUsage":6}` instead of the vendor and product IDs. Only enabled rows are sent.
+
+Clear everything with the global command, then once per keyboard that had its own list:
 
 ```sh
 hidutil property --set '{"UserKeyMapping":[]}'
+hidutil property --matching '{"VendorID":1452,"ProductID":832,"PrimaryUsagePage":1,"PrimaryUsage":6}' --set '{"UserKeyMapping":[]}'
 ```

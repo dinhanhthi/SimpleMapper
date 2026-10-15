@@ -11,10 +11,15 @@ final class AppModel: ObservableObject {
     var connectedDevices: [KeyboardDevice] = []
 
     private var store: SettingsStore?
+    /// Runs one hidutil command (no-op in demo mode).
+    private var runner: ([String]) -> String? = Remapper.run
 
     /// Loads the settings, shows any problem and applies them. When the iCloud copy is still downloading, checks
     /// once more later and adopts it if it was restored.
     func start(store: SettingsStore = SettingsStore()) {
+        #if DEBUG
+        let store = demoStore() ?? store
+        #endif
         self.store = store
         let (settings, problem) = store.load()
         self.settings = settings
@@ -48,15 +53,39 @@ final class AppModel: ObservableObject {
     func apply() {
         guard let store else { return }
         let (commands, applied) = Remapper.applyCommands(settings, previous: store.appliedScopes)
-        lastError = Remapper.execute(commands) ?? lastError
+        lastError = Remapper.execute(commands, runner: runner) ?? lastError
         store.appliedScopes = applied
     }
 
     func clearOnQuit() {
         guard let store else { return }
-        _ = Remapper.execute(Remapper.clearCommands(previous: store.appliedScopes))
+        _ = Remapper.execute(Remapper.clearCommands(previous: store.appliedScopes), runner: runner)
         store.appliedScopes = []
     }
+
+    #if DEBUG
+    /// Demo mode for the README screenshots (`SIMPLEMAPPER_DEMO=1`, Debug builds only): fixed settings in a fresh
+    /// temp folder, iCloud off, and hidutil is never run, so the user's settings and keyboard are untouched.
+    private func demoStore() -> SettingsStore? {
+        guard ProcessInfo.processInfo.environment["SIMPLEMAPPER_DEMO"] == "1" else { return nil }
+        runner = { _ in nil }
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("SimpleMapperDemo-\(UUID().uuidString)", isDirectory: true)
+        let store = SettingsStore(localDir: root.appendingPathComponent("local", isDirectory: true),
+                                  cloudRoot: root.appendingPathComponent("no-icloud", isDirectory: true),
+                                  defaults: UserDefaults(suiteName: "SimpleMapperDemo-\(UUID().uuidString)")!)
+        func mapping(_ from: String, _ to: String, enabled: Bool = true) -> Mapping {
+            Mapping(from: KeyCatalog.key(name: from)!.usage, to: KeyCatalog.key(name: to)!.usage, enabled: enabled)
+        }
+        let keychron = KeyboardDevice(vendorID: 0x05AC, productID: 0x0250, builtIn: false, name: "Keychron K8")
+        _ = store.save(Settings(modifiedAt: Date(), all: [
+            mapping("caps_lock", "escape"),
+            mapping("non_us_backslash", "grave_accent_and_tilde"),
+            mapping("right_option", "fn", enabled: false),
+        ], keyboards: [DeviceMappings(device: keychron, mappings: [mapping("right_command", "right_control")])]))
+        return store
+    }
+    #endif
 
     /// Adds a mapping to the All list (`device` nil) or to that keyboard's list. The same `from` in that list
     /// replaces its `to` and enables it. Returns whether the mapping was accepted.

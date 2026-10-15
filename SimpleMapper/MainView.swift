@@ -28,6 +28,7 @@ struct MainView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     mappingList
                     newMappingCard
+                    Spacer(minLength: 0)
                 }
             }
 
@@ -75,20 +76,26 @@ struct MainView: View {
             if list.isEmpty {
                 Text("No mappings yet. Add one below.")
                     .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
             } else {
-                ScrollView {
-                    VStack(spacing: 0) {
-                        ForEach(list) { mapping in
-                            if mapping.id != list.first?.id { Divider() }
-                            row(mapping)
-                        }
-                    }
-                    .modifier(GlassCard())
+                // As tall as its rows; scrolls only when the window is too short.
+                ViewThatFits(in: .vertical) {
+                    rows(list)
+                    ScrollView { rows(list) }
                 }
             }
         }
-        .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    private func rows(_ list: [Mapping]) -> some View {
+        VStack(spacing: 0) {
+            ForEach(list) { mapping in
+                if mapping.id != list.first?.id { Divider() }
+                row(mapping)
+            }
+        }
+        .modifier(GlassCard())
     }
 
     private func row(_ mapping: Mapping) -> some View {
@@ -105,7 +112,7 @@ struct MainView: View {
             ))
             .toggleStyle(.switch)
             .labelsHidden()
-            .controlSize(.small)
+            .controlSize(.mini)
             Button { model.remove(mapping.id, in: current) } label: {
                 Label("Remove", systemImage: "trash").labelStyle(.iconOnly)
             }

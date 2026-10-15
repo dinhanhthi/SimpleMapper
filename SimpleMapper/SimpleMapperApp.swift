@@ -46,8 +46,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         source.setEventHandler { NSApp.terminate(nil) }
         source.resume()
         sigtermSource = source
-        updater.start()
+        #if DEBUG
+        let demo = ProcessInfo.processInfo.environment["SIMPLEMAPPER_DEMO"] == "1"
+        #else
+        let demo = false
+        #endif
+        if !demo { updater.start() }
         model.start()
+        #if DEBUG
+        // README screenshots (scripts/screenshots.sh): the `-AppleInterfaceStyle Light|Dark` launch argument sets
+        // this app's appearance (the system one is never changed), and the About panel opens once launched.
+        if ProcessInfo.processInfo.environment["SIMPLEMAPPER_DEMO"] == "1" {
+            let dark = UserDefaults.standard.string(forKey: "AppleInterfaceStyle") == "Dark"
+            NSApp.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+        }
+        if ProcessInfo.processInfo.environment["SIMPLEMAPPER_DEMO_ABOUT"] == "1" {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in self?.showAbout() }
+        }
+        #endif
         // A login-item launch (or a scripted `--background` start) stays in the menu bar.
         let event = NSAppleEventManager.shared().currentAppleEvent
         let loginLaunch = event?.eventID == AEEventID(kAEOpenApplication)

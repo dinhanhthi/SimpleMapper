@@ -9,10 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Menu bar app that remaps one key, by default § (`non_us_backslash`) to backtick (`grave_accent_and_tilde`).
-- From and To pickers with every keyboard key plus `fn`, grouped by category with Karabiner-Elements names.
-- Apply the mapping to all keyboards or to one keyboard, including the built-in one.
+- Main window with a mapping list per keyboard: an All keyboards list plus one list per keyboard (built-in or external); the keyboard's own entry wins on the same From key.
+- Per-row on/off toggle, From and To pickers with every keyboard key plus `fn`, grouped by category with Karabiner-Elements names.
 - Detect key: press a key to use it as From or To, or to pick the keyboard it came from.
-- On/off switch; the mapping is re-applied at launch and when a keyboard reconnects, and cleared on Quit.
-- Launch at login.
-- Automatic updates via Sparkle, plus Check for Updates.
+- Import and export of the settings as JSON.
+- Settings file in Application Support, copied to iCloud Drive on every save and restored from it when the local file is missing (reinstall, new Mac).
+- Menu bar menu: Open SimpleMapper, Launch at login, number of active mappings, Check for Updates, About, Quit with confirmation.
+- About panel with the app logo.
+- Mappings are re-applied at launch and when a keyboard reconnects, and cleared on Quit.
+- Dock icon only while the window is open; a login launch stays in the menu bar.
+- Automatic updates via Sparkle.
+- A fresh install starts with no mappings. The previous single mapping of pre-release builds is migrated once.
