@@ -81,15 +81,18 @@ flowchart LR
 
 ## Resource usage
 
-Measured on 2026-10-15, macOS 27.0.1, Release build, 10 samples of 1 second with `top`:
+Both apps doing the same job (one mapping, `non_us_backslash` → `grave_accent_and_tilde`), measured on 2026-10-16 with macOS 27.0.1, SimpleMapper 1.0.0 and Karabiner-Elements 16.3.0. Memory is the `top` MEM column.
 
-| | Memory | CPU |
+| State | SimpleMapper | Karabiner-Elements (all processes) |
 | --- | --- | --- |
-| SimpleMapper, menu bar only | 14.0 MB | 0.00% |
-| SimpleMapper, window open | 33.9 MB | 0.00% |
-| Karabiner-Elements, running processes (Core-Service 14.0 MB, VirtualHIDDevice-Daemon 5.9 MB, DriverKit extension 0.9 MB) | 20.8 MB | 0.07% |
+| Idle in the background | **14 MB**, 0% CPU | **72 MB**, ~1% CPU |
+| Settings window open | **34 MB**, 0% CPU | **130 MB**, ~1% CPU |
+| Typing, window closed | **34 MB**, 0% CPU | **73 MB**, 2.3% CPU |
 
-Closing the window releases its UI; the "menu bar only" row was measured on a launch without the window. Numbers vary by macOS version. To reproduce, start SimpleMapper and Karabiner-Elements and run `scripts/measure.sh`.
+- Typing costs SimpleMapper nothing: macOS (`hidutil`) does the remapping, while Karabiner-Elements handles every key event itself.
+- Once opened, the window keeps SwiftUI and Metal loaded (about 20 MB) until the next launch, hence 34 MB in the typing row.
+
+Numbers vary by Mac and macOS version. To compare on yours, start both apps and run `scripts/measure.sh`.
 
 ## FAQ
 
