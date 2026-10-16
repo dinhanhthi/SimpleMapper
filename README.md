@@ -56,6 +56,7 @@ SimpleMapper lives in the menu bar. Its menu has:
 - Open SimpleMapper
 - Launch at login
 - "N mappings active" (or the last error)
+- "Input Monitoring: granted" or "not granted", with Grant Input Monitoring... while it is not granted (only Detect key needs it)
 - Check for Updates...
 - About SimpleMapper
 - Quit, with a "Sure to quit" item so you do not quit by accident

@@ -80,6 +80,20 @@ final class KeyDetector: ObservableObject {
         isDetecting = false
     }
 
+    /// Input Monitoring is granted. Read live, so a grant in System Settings shows without a relaunch.
+    var hasAccess: Bool {
+        IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted
+    }
+
+    /// Shows the system prompt the first time; macOS does not prompt again after a denial, so then opens System Settings.
+    func requestAccess() {
+        if IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeUnknown {
+            IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
+        } else {
+            openInputMonitoringSettings()
+        }
+    }
+
     func openInputMonitoringSettings() {
         guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") else { return }
         NSWorkspace.shared.open(url)

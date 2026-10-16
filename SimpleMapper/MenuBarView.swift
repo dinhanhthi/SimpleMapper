@@ -6,15 +6,18 @@ final class StatusMenu: NSObject, NSMenuDelegate {
     private let model: AppModel
     private let monitor: KeyboardMonitor
     private let updater: Updater
+    private let detector: KeyDetector
     private let onOpen: () -> Void
     private let onAbout: () -> Void
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let menu = NSMenu()
 
-    init(model: AppModel, monitor: KeyboardMonitor, updater: Updater, onOpen: @escaping () -> Void, onAbout: @escaping () -> Void) {
+    init(model: AppModel, monitor: KeyboardMonitor, updater: Updater, detector: KeyDetector,
+         onOpen: @escaping () -> Void, onAbout: @escaping () -> Void) {
         self.model = model
         self.monitor = monitor
         self.updater = updater
+        self.detector = detector
         self.onOpen = onOpen
         self.onAbout = onAbout
         super.init()
@@ -39,6 +42,15 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         let info = NSMenuItem(title: model.lastError ?? activeText, action: nil, keyEquivalent: "")
         info.isEnabled = false
         menu.addItem(info)
+        // Input Monitoring is only needed by Detect key; remapping itself needs no permission.
+        let granted = detector.hasAccess
+        let access = NSMenuItem(title: granted ? "Input Monitoring: granted" : "Input Monitoring: not granted",
+                                action: nil, keyEquivalent: "")
+        access.isEnabled = false
+        menu.addItem(access)
+        if !granted {
+            menu.addItem(item("Grant Input Monitoring…", #selector(grantAccess)))
+        }
         menu.addItem(.separator())
         let update = item("Check for Updates…", #selector(checkForUpdates))
         update.isEnabled = updater.canCheck
@@ -67,6 +79,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
 
     @objc private func open() { onOpen() }
     @objc private func toggleLaunchAtLogin() { model.launchAtLogin.toggle() }
+    @objc private func grantAccess() { detector.requestAccess() }
     @objc private func checkForUpdates() { updater.checkForUpdates() }
     @objc private func about() { onAbout() }
     @objc private func terminate() { NSApp.terminate(nil) }

@@ -34,7 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard !isTesting else { return }
         NSApp.mainMenu = makeMainMenu()
-        statusMenu = StatusMenu(model: model, monitor: monitor, updater: updater,
+        statusMenu = StatusMenu(model: model, monitor: monitor, updater: updater, detector: detector,
                                 onOpen: { [weak self] in self?.showMainWindow() },
                                 onAbout: { [weak self] in self?.showAbout() })
         model.connectedDevices = monitor.devices
