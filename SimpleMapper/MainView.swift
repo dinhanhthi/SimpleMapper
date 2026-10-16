@@ -141,8 +141,8 @@ struct MainView: View {
                         .font(.callout)
                         .lineLimit(2)
                     HStack(spacing: 6) {
-                        Button("Use as From") { newFrom = detected.usage }
-                        Button("Use as To") { newTo = detected.usage }
+                        Button("Use as From") { newFrom = detected.usage; detector.detected = nil }
+                        Button("Use as To") { newTo = detected.usage; detector.detected = nil }
                         if let device = detected.device {
                             Button("Use this keyboard") { scope = device.scope }
                                 .disabled(current == device.scope)
