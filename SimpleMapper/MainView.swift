@@ -165,7 +165,7 @@ struct MainView: View {
                         .fill(sameAsAll ? Color.green : CompactSwitch.offFill)
                         .frame(width: CompactSwitch.height, height: CompactSwitch.height)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowIconButtonStyle())
                 .help(sameAsAll ? "From All keyboards: ON" : "From All keyboards: OFF (click to use All keyboards)")
             }
             if current == .all {
@@ -175,7 +175,7 @@ struct MainView: View {
                         .font(.system(size: 15))
                         .frame(height: CompactSwitch.height)
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(RowIconButtonStyle())
                 .foregroundStyle(.secondary)
                 .help("Apply to every keyboard")
             }
@@ -196,7 +196,7 @@ struct MainView: View {
                     .font(.system(size: 15))
                     .frame(height: CompactSwitch.height)
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(RowIconButtonStyle())
             .foregroundStyle(.secondary)
             .help("Remove")
         }
@@ -377,6 +377,35 @@ struct KeyCap: ViewModifier {
         case .plain: return AnyShapeStyle(Self.fill)
         case .from: return AnyShapeStyle(LinearGradient(colors: Self.from, startPoint: .topLeading, endPoint: .bottomTrailing))
         case .to: return AnyShapeStyle(LinearGradient(colors: Self.to, startPoint: .topLeading, endPoint: .bottomTrailing))
+        }
+    }
+}
+
+/// The icon buttons of a row (dot, Apply to every keyboard, Remove): a round highlight on hover, darker and a bit
+/// smaller while pressed. The highlight reaches past the label without changing the row's layout.
+struct RowIconButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Highlight(configuration: configuration)
+    }
+
+    private struct Highlight: View {
+        let configuration: ButtonStyleConfiguration
+        @State private var hovered = false
+        private static let hoverFill = Color(light: .black.withAlphaComponent(0.07), dark: .white.withAlphaComponent(0.1))
+        private static let pressedFill = Color(light: .black.withAlphaComponent(0.15), dark: .white.withAlphaComponent(0.2))
+
+        var body: some View {
+            configuration.label
+                .background {
+                    Circle()
+                        .fill(configuration.isPressed ? Self.pressedFill : hovered ? Self.hoverFill : .clear)
+                        .padding(-5)
+                }
+                .contentShape(Rectangle())
+                .scaleEffect(configuration.isPressed ? 0.88 : 1)
+                .animation(.snappy(duration: 0.12), value: configuration.isPressed)
+                .animation(.easeOut(duration: 0.12), value: hovered)
+                .onHover { hovered = $0 }
         }
     }
 }
