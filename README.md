@@ -15,7 +15,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/main-dark.png">
-  <img src="assets/screenshots/main-light.png" width="440" alt="The SimpleMapper window: a list of key mappings with on/off switches, a New mapping box and Import and Export buttons">
+  <img src="assets/screenshots/main-light.png" width="440" alt="The SimpleMapper window: a keyboard picker, theme, Import, Export and + buttons in the toolbar, and a list of key mappings with on/off switches">
 </picture>
 
 </div>
