@@ -86,6 +86,7 @@ struct NewMappingView: View {
                     .keyboardShortcut(.defaultAction)
                     .disabled(from == nil || to == nil)
             }
+            .buttonBorderShape(.capsule)
         }
         .padding(20)
         .frame(width: 400)
