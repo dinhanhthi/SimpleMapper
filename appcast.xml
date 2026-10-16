@@ -3,6 +3,15 @@
     <channel>
         <title>SimpleMapper</title>
         <item>
+            <title>1.1.2</title>
+            <pubDate>Fri, 16 Oct 2026 20:03:54 +0200</pubDate>
+            <sparkle:fullReleaseNotesLink>https://github.com/dinhanhthi/SimpleMapper/releases</sparkle:fullReleaseNotesLink>
+            <sparkle:version>4</sparkle:version>
+            <sparkle:shortVersionString>1.1.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/dinhanhthi/SimpleMapper/releases/download/v1.1.2/SimpleMapper-1.1.2.zip" length="3959462" type="application/octet-stream" sparkle:edSignature="YI9eHEoHDLfPoHzbkXvDikbqPacEAxdHpvd9aDJc19UVbwHlLHQ8HxSjFK0eqwIlBvejS2F6o/tFedmdBSnrBg=="/>
+        </item>
+        <item>
             <title>1.1.1</title>
             <pubDate>Fri, 16 Oct 2026 19:05:32 +0200</pubDate>
             <sparkle:fullReleaseNotesLink>https://github.com/dinhanhthi/SimpleMapper/releases</sparkle:fullReleaseNotesLink>
