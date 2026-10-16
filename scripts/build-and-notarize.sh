@@ -33,7 +33,7 @@ INFO_PLIST="SimpleMapper/Info.plist"
 ARCHIVE="release/SimpleMapper.xcarchive"
 EXPORT_DIR="release/export"
 APP="$EXPORT_DIR/SimpleMapper.app"
-MIN_MACOS="13.0"   # SimpleMapper's hard minimum (project.yml) — guarded below
+MIN_MACOS="14.0"   # SimpleMapper's hard minimum (project.yml) — guarded below
 PROFILE="${SIMPLEMAPPER_NOTARY_PROFILE:-simplemapper-notary}"
 
 # Submit to Apple and FAIL the script on anything other than "Accepted". notarytool exits 0

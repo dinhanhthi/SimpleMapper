@@ -8,7 +8,7 @@
 
 [![Latest release](https://img.shields.io/github/v/release/dinhanhthi/SimpleMapper)](https://github.com/dinhanhthi/SimpleMapper/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/dinhanhthi/SimpleMapper/total)](https://github.com/dinhanhthi/SimpleMapper/releases)
-![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue)
+![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
 [![License: MIT](https://img.shields.io/github/license/dinhanhthi/SimpleMapper)](LICENSE)
 
 ### [Download for macOS](https://github.com/dinhanhthi/SimpleMapper/releases/latest)
@@ -38,7 +38,7 @@
 2. Open it and drag SimpleMapper to `/Applications`.
 3. Launch it. The window opens; a fresh install has no mappings yet.
 
-SimpleMapper updates itself via Sparkle. To check manually, use Check for Updates in the menu bar menu. Requires macOS 13 or later.
+SimpleMapper updates itself via Sparkle. To check manually, use Check for Updates in the menu bar menu. Requires macOS 14 or later.
 
 ## Usage
 

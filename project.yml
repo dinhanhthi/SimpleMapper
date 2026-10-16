@@ -1,7 +1,7 @@
 name: SimpleMapper
 options:
   deploymentTarget:
-    macOS: "13.0"
+    macOS: "14.0"
   xcodeVersion: "27.0"
 packages:
   Sparkle:

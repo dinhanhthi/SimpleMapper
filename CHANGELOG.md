@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Menu bar menu shows whether Input Monitoring (needed by Detect key) is granted, with Grant Input Monitoring… to ask for it.
 
+### Changed
+
+- Requires macOS 14 or later.
+
 ## [1.0.0] - 2026-10-16
 
 ### Added

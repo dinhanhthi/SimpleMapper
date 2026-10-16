@@ -4,7 +4,7 @@ Thanks for helping. SimpleMapper stays small on purpose: a window and a menu bar
 
 ## Prerequisites
 
-- macOS 13+ to run the app.
+- macOS 14+ to run the app.
 - Xcode 26+ to compile it (the app icon is an Icon Composer `.icon`).
 - XcodeGen:
 
