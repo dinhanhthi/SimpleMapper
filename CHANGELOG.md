@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-10-16
+
 ### Added
 
 - Checks for updates in the background at launch and daily; a green update button next to the keyboard picker (and "Update Available…" in the menu bar menu) shows when a new version is available.
