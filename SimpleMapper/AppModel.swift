@@ -87,47 +87,114 @@ final class AppModel: ObservableObject {
     }
     #endif
 
-    /// Adds a mapping to the All list (`device` nil) or to that keyboard's list. The same `from` in that list
-    /// replaces its `to` and enables it. Returns whether the mapping was accepted.
+    /// Adds a mapping to the All list (`device` nil) or to that keyboard's list; refused when that list already
+    /// shows `from` (`Settings.shows`). Returns whether the mapping was accepted.
     @discardableResult
     func add(from: UInt64, to: UInt64, in device: KeyboardDevice?) -> Bool {
-        var candidate = settings
-        if let device, listPath(device.scope, in: candidate) == nil {
-            guard candidate.keyboards.count < Settings.maxKeyboards else {
-                lastError = "At most \(Settings.maxKeyboards) keyboards can have their own mappings."
-                return false
-            }
-            candidate.keyboards.append(DeviceMappings(device: device, mappings: []))
+        guard !settings.shows(from, in: device?.scope ?? .all) else {
+            lastError = "This key is already mapped in this list."
+            return false
         }
+        return override(from: from, to: to, enabled: true, in: device)
+    }
+
+    /// Sets the row for `from` in the All list (`device` nil) or that keyboard's own list, adding it if needed; a
+    /// keyboard row equal to the All mapping is not kept (`Settings.followAll`).
+    @discardableResult
+    func override(from: UInt64, to: UInt64, enabled: Bool, in device: KeyboardDevice?) -> Bool {
+        var candidate = settings
+        if let device, !addKeyboard(device, to: &candidate) { return false }
         guard let path = listPath(device?.scope ?? .all, in: candidate) else { return false }
         if let i = candidate[keyPath: path].firstIndex(where: { $0.from == from }) {
             candidate[keyPath: path][i].to = to
-            candidate[keyPath: path][i].enabled = true
+            candidate[keyPath: path][i].enabled = enabled
         } else {
             guard candidate[keyPath: path].count < Settings.maxMappingsPerList else {
                 lastError = "At most \(Settings.maxMappingsPerList) mappings per list."
                 return false
             }
-            candidate[keyPath: path].append(Mapping(from: from, to: to, enabled: true))
+            candidate[keyPath: path].append(Mapping(from: from, to: to, enabled: enabled))
         }
+        if let device { candidate.followAll(from, in: device.scope) }
         return commit(candidate)
     }
 
+    /// Removing an All row also removes, on every keyboard, its own rows with the same values (green dots); rows
+    /// with other values (gray dots) stay.
     func remove(_ id: UUID, in scope: Scope) {
-        edit(id, in: scope) { $0.remove(at: $1) }
+        guard scope == .all, let removed = settings.all.first(where: { $0.id == id }) else {
+            edit(id, in: scope) { $0.remove(at: $1) }
+            return
+        }
+        var candidate = settings
+        candidate.removeFromAll(removed)
+        commit(candidate)
+    }
+
+    /// The keyboard no longer maps `from`: its own row for it is removed and the All mapping for it is not used
+    /// there, until `from` is added to this keyboard again.
+    func exclude(_ from: UInt64, in device: KeyboardDevice) {
+        var candidate = settings
+        guard addKeyboard(device, to: &candidate),
+              let k = candidate.keyboards.firstIndex(where: { $0.device.scope == device.scope })
+        else { return }
+        candidate.keyboards[k].mappings.removeAll { $0.from == from }
+        if !candidate.keyboards[k].excluded.contains(from) { candidate.keyboards[k].excluded.append(from) }
+        commit(candidate)
+    }
+
+    /// Every keyboard follows the All mapping for `from` again (`Settings.applyToAllKeyboards`).
+    func applyToAllKeyboards(_ from: UInt64) {
+        var candidate = settings
+        candidate.applyToAllKeyboards(from)
+        commit(candidate)
+    }
+
+    /// The keyboard follows the All mapping for `from` again: its own row for it is removed.
+    func useAll(_ from: UInt64, in scope: Scope) {
+        var candidate = settings
+        guard scope != .all, let k = candidate.keyboards.firstIndex(where: { $0.device.scope == scope }) else { return }
+        candidate.keyboards[k].mappings.removeAll { $0.from == from }
+        candidate.keyboards[k].excluded.removeAll { $0 == from }
+        commit(candidate)
     }
 
     func setEnabled(_ enabled: Bool, for id: UUID, in scope: Scope) {
         edit(id, in: scope) { $0[$1].enabled = enabled }
     }
 
-    /// Refused when another row of that list already maps `from` (no duplicates in a list).
-    func setFrom(_ from: UInt64, for id: UUID, in scope: Scope) {
-        guard !settings.list(for: scope).contains(where: { $0.from == from && $0.id != id }) else {
+    /// Refused when the list already shows `from` (`Settings.shows`). For a keyboard, the card becomes its own row
+    /// (it may follow All again, see `Settings.followAll`), and the All mapping for the old key is excluded there,
+    /// so it does not come back as another card.
+    func setFrom(_ from: UInt64, for mapping: Mapping, in device: KeyboardDevice?) {
+        guard from != mapping.from else { return }
+        let scope = device?.scope ?? .all
+        guard !settings.shows(from, in: scope) else {
             lastError = "This key is already mapped in this list."
             return
         }
-        edit(id, in: scope) { $0[$1].from = from }
+        guard let device else {
+            edit(mapping.id, in: .all) { $0[$1].from = from }
+            return
+        }
+        var candidate = settings
+        guard addKeyboard(device, to: &candidate),
+              let k = candidate.keyboards.firstIndex(where: { $0.device.scope == scope })
+        else { return }
+        if let i = candidate.keyboards[k].mappings.firstIndex(where: { $0.id == mapping.id }) {
+            candidate.keyboards[k].mappings[i].from = from
+        } else {
+            guard candidate.keyboards[k].mappings.count < Settings.maxMappingsPerList else {
+                lastError = "At most \(Settings.maxMappingsPerList) mappings per list."
+                return
+            }
+            candidate.keyboards[k].mappings.append(Mapping(from: from, to: mapping.to, enabled: mapping.enabled))
+        }
+        if candidate.allMapping(from: mapping.from) != nil, !candidate.keyboards[k].excluded.contains(mapping.from) {
+            candidate.keyboards[k].excluded.append(mapping.from)
+        }
+        candidate.followAll(from, in: scope)
+        commit(candidate)
     }
 
     func setTo(_ to: UInt64, for id: UUID, in scope: Scope) {
@@ -176,10 +243,23 @@ final class AppModel: ObservableObject {
               let i = candidate[keyPath: path].firstIndex(where: { $0.id == id })
         else { return }
         change(&candidate[keyPath: path], i)
+        // The edited row's key, if it is still there (not after a remove).
+        if let from = candidate[keyPath: path].first(where: { $0.id == id })?.from { candidate.followAll(from, in: scope) }
         commit(candidate)
     }
 
-    /// Drops empty keyboard lists, stamps the date and checks the result reads back as a valid file (else only
+    /// Adds an empty entry for `device` unless it has one; `false` when there are too many keyboards.
+    private func addKeyboard(_ device: KeyboardDevice, to candidate: inout Settings) -> Bool {
+        guard !candidate.keyboards.contains(where: { $0.device.scope == device.scope }) else { return true }
+        guard candidate.keyboards.count < Settings.maxKeyboards else {
+            lastError = "At most \(Settings.maxKeyboards) keyboards can have their own mappings."
+            return false
+        }
+        candidate.keyboards.append(DeviceMappings(device: device, mappings: []))
+        return true
+    }
+
+    /// Tidies the keyboard entries (`Settings.tidy`), stamps the date and checks the result reads back as a valid file (else only
     /// `lastError` changes, so the next launch never has to move the file aside); then saves and applies.
     /// `false` only when the result is not a valid file (or there is no store).
     @discardableResult
@@ -187,7 +267,7 @@ final class AppModel: ObservableObject {
         guard let store else { return false }
         guard candidate != settings else { return true }
         var candidate = candidate
-        candidate.keyboards.removeAll { $0.mappings.isEmpty }
+        candidate.tidy()
         candidate.modifiedAt = Date()
         do {
             _ = try Settings.decode(candidate.encoded())

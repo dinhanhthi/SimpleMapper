@@ -21,10 +21,37 @@ struct Mapping: Codable, Hashable, Identifiable {
     }
 }
 
-/// The mappings of one keyboard; they win over the All list on the same `from` key.
+/// The mappings of one keyboard; they win over the All list on the same `from` key. `excluded`: the All list's
+/// `from` keys this keyboard does not use (removed from it); written only when not empty.
 struct DeviceMappings: Codable, Hashable {
     var device: KeyboardDevice
     var mappings: [Mapping]
+    var excluded: [UInt64] = []
+
+    private enum CodingKeys: String, CodingKey { case device, mappings, excluded }
+
+    init(device: KeyboardDevice, mappings: [Mapping], excluded: [UInt64] = []) {
+        self.device = device
+        self.mappings = mappings
+        self.excluded = excluded
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        device = try container.decode(KeyboardDevice.self, forKey: .device)
+        mappings = try container.decode([Mapping].self, forKey: .mappings)
+        excluded = try container.decodeIfPresent([UInt64].self, forKey: .excluded) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(device, forKey: .device)
+        try container.encode(mappings, forKey: .mappings)
+        if !excluded.isEmpty { try container.encode(excluded, forKey: .excluded) }
+    }
+
+    /// Nothing of its own: the keyboard just uses the All list.
+    var isEmpty: Bool { mappings.isEmpty && excluded.isEmpty }
 }
 
 /// Everything SimpleMapper saves: the settings file format, version 1.
@@ -70,8 +97,9 @@ struct Settings: Codable, Equatable {
         guard version == 1 else { throw SettingsError.unsupportedVersion(version) }
         var settings = try decoder.decode(Settings.self, from: data)
         guard settings.keyboards.count <= maxKeyboards else { throw SettingsError.tooManyKeyboards(settings.keyboards.count) }
-        for list in [settings.all] + settings.keyboards.map(\.mappings) where list.count > maxMappingsPerList {
-            throw SettingsError.tooManyMappings(list.count)
+        for count in [settings.all.count] + settings.keyboards.flatMap({ [$0.mappings.count, $0.excluded.count] })
+        where count > maxMappingsPerList {
+            throw SettingsError.tooManyMappings(count)
         }
         for device in settings.keyboards.map(\.device) {
             let ids = 0...0xFFFF
@@ -79,11 +107,11 @@ struct Settings: Codable, Equatable {
                 throw SettingsError.invalidDevice(vendorID: device.vendorID, productID: device.productID)
             }
         }
-        for mapping in settings.all + settings.keyboards.flatMap(\.mappings) {
-            for usage in [mapping.from, mapping.to]
-            where KeyDetector.acceptedUsage(page: UInt32(usage >> 32), usage: UInt32(usage & 0xFFFF_FFFF)) == nil {
-                throw SettingsError.invalidKey(usage)
-            }
+        let usages = (settings.all + settings.keyboards.flatMap(\.mappings)).flatMap { [$0.from, $0.to] }
+            + settings.keyboards.flatMap(\.excluded)
+        for usage in usages
+        where KeyDetector.acceptedUsage(page: UInt32(usage >> 32), usage: UInt32(usage & 0xFFFF_FFFF)) == nil {
+            throw SettingsError.invalidKey(usage)
         }
         // The built-in keyboard is one scope (hidutil matches it by `Built-In`), whatever IDs a Mac reported.
         var keyboards: [DeviceMappings] = []
@@ -103,8 +131,9 @@ struct Settings: Codable, Equatable {
             // Two built-in entries (from Macs with different IDs): keep the first, add the keys it does not map.
             let froms = Set(keyboards[i].mappings.map(\.from))
             keyboards[i].mappings += entry.mappings.filter { !froms.contains($0.from) }
-            guard keyboards[i].mappings.count <= maxMappingsPerList else {
-                throw SettingsError.tooManyMappings(keyboards[i].mappings.count)
+            keyboards[i].excluded += entry.excluded.filter { !keyboards[i].excluded.contains($0) }
+            for count in [keyboards[i].mappings.count, keyboards[i].excluded.count] where count > maxMappingsPerList {
+                throw SettingsError.tooManyMappings(count)
             }
         }
         settings.keyboards = keyboards
@@ -119,10 +148,10 @@ struct Settings: Codable, Equatable {
         return String(String(scalars).prefix(maxNameLength))
     }
 
-    /// Pretty, key-sorted JSON; keyboards without mappings are dropped.
+    /// Pretty, key-sorted JSON; keyboards with nothing of their own are dropped.
     func encoded() -> Data {
         var copy = self
-        copy.keyboards.removeAll { $0.mappings.isEmpty }
+        copy.keyboards.removeAll(where: \.isEmpty)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .custom { date, encoder in
             var container = encoder.singleValueContainer()
@@ -136,6 +165,66 @@ struct Settings: Codable, Equatable {
     func list(for scope: Scope) -> [Mapping] {
         guard scope != .all else { return all }
         return keyboards.first { $0.device.scope == scope }?.mappings ?? []
+    }
+
+    /// The All list's keys `scope` does not use (none for `.all`).
+    func excluded(for scope: Scope) -> [UInt64] {
+        keyboards.first { $0.device.scope == scope }?.excluded ?? []
+    }
+
+    /// The All row for `from` that a keyboard follows: the last enabled one (as hidutil gets), else the first.
+    func allMapping(from: UInt64) -> Mapping? {
+        all.last { $0.from == from && $0.enabled } ?? all.first { $0.from == from }
+    }
+
+    /// Whether the list for `scope` has a card for `from`: a row of its own or, for a keyboard, an All key it uses.
+    func shows(_ from: UInt64, in scope: Scope) -> Bool {
+        list(for: scope).contains { $0.from == from }
+            || scope != .all && allMapping(from: from) != nil && !excluded(for: scope).contains(from)
+    }
+
+    /// After a local edit of `from` in `scope`'s own list: `from` is no longer excluded, and a row for it equal to
+    /// the All mapping (To and on/off) is dropped, so the keyboard follows All for that key again. Only the edited
+    /// key, and never for All changes: an override stays when All later gets the same values.
+    mutating func followAll(_ from: UInt64, in scope: Scope) {
+        guard scope != .all, let k = keyboards.firstIndex(where: { $0.device.scope == scope }) else { return }
+        keyboards[k].excluded.removeAll { $0 == from }
+        guard let followed = allMapping(from: from) else { return }
+        keyboards[k].mappings.removeAll { $0.from == from && $0.to == followed.to && $0.enabled == followed.enabled }
+    }
+
+    /// Removes `mapping` from the All list; once All no longer maps its key, each keyboard's own rows equal to it
+    /// (To and on/off: green dots) go too, and rows with other values stay.
+    mutating func removeFromAll(_ mapping: Mapping) {
+        all.removeAll { $0.id == mapping.id }
+        guard allMapping(from: mapping.from) == nil else { return }
+        for k in keyboards.indices {
+            keyboards[k].mappings.removeAll { $0.from == mapping.from && $0.to == mapping.to && $0.enabled == mapping.enabled }
+        }
+    }
+
+    /// The keyboards that do not follow the All mapping for `from`: with their own row for it, or that removed it.
+    func keyboardsNotFollowingAll(_ from: UInt64) -> [KeyboardDevice] {
+        keyboards.filter { $0.mappings.contains { $0.from == from } || $0.excluded.contains(from) }.map(\.device)
+    }
+
+    /// Every keyboard follows the All mapping for `from` again: their own rows for it and its exclusions go.
+    mutating func applyToAllKeyboards(_ from: UInt64) {
+        for k in keyboards.indices {
+            keyboards[k].mappings.removeAll { $0.from == from }
+            keyboards[k].excluded.removeAll { $0 == from }
+        }
+    }
+
+    /// Drops excluded keys the All list no longer has or the keyboard has its own row for, then keyboards with
+    /// nothing of their own.
+    mutating func tidy() {
+        let allFroms = Set(all.map(\.from))
+        for k in keyboards.indices {
+            let own = Set(keyboards[k].mappings.map(\.from))
+            keyboards[k].excluded.removeAll { !allFroms.contains($0) || own.contains($0) }
+        }
+        keyboards.removeAll(where: \.isEmpty)
     }
 
     /// Enabled pairs only; the last enabled entry per `from` wins, in order of first appearance.
@@ -153,18 +242,21 @@ struct Settings: Codable, Equatable {
         return pairs
     }
 
-    /// What hidutil gets for `scope`: the All list, overridden or extended by the keyboard's own entries.
+    /// What hidutil gets for `scope`: the All list without its excluded keys, overridden or extended by the
+    /// keyboard's own entries. A keyboard entry wins on its `from` key even when disabled: that key is then not
+    /// mapped on this keyboard.
     func merged(for scope: Scope) -> [(from: UInt64, to: UInt64)] {
-        var pairs = Self.dedupe(all)
-        guard scope != .all else { return pairs }
-        for pair in Self.dedupe(list(for: scope)) {
-            if let i = pairs.firstIndex(where: { $0.from == pair.from }) {
-                pairs[i].to = pair.to
-            } else {
-                pairs.append(pair)
-            }
+        let allPairs = Self.dedupe(all)
+        guard scope != .all else { return allPairs }
+        let own = list(for: scope)
+        let ownFroms = Set(own.map(\.from))
+        let ownPairs = Self.dedupe(own)
+        let excluded = Set(excluded(for: scope))
+        let kept = allPairs.compactMap { pair in
+            ownFroms.contains(pair.from) ? ownPairs.first { $0.from == pair.from }
+                : excluded.contains(pair.from) ? nil : pair
         }
-        return pairs
+        return kept + ownPairs.filter { pair in !allPairs.contains { $0.from == pair.from } }
     }
 
     /// Active mappings: the All list plus each connected keyboard's extra keys (overrides are not counted twice).

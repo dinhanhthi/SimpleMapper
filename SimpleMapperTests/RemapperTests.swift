@@ -74,14 +74,14 @@ final class RemapperTests: XCTestCase {
         XCTAssertEqual(plan.applied, [])
     }
 
-    func testAppliedOnlyHasScopesWithAnEnabledMapping() {
+    func testAppliedHasEveryScopeWithItsOwnList() {
         let value = settings(all: [], keyboards: [
             DeviceMappings(device: magic, mappings: [Mapping(from: keyA, to: keyB, enabled: true)]),
             DeviceMappings(device: builtIn, mappings: [Mapping(from: keyA, to: keyB, enabled: false)]),
         ])
         let plan = Remapper.applyCommands(value, previous: [])
-        XCTAssertEqual(plan.applied, [magic.scope])
-        XCTAssertEqual(plan.commands.count, 2)
+        XCTAssertEqual(plan.applied, [magic.scope, builtIn.scope])
+        XCTAssertEqual(plan.commands.count, 3)
     }
 
     func testClearPlanIsGlobalThenEachPreviousScopeInStableOrder() {

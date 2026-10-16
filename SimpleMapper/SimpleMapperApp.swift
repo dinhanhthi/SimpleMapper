@@ -36,6 +36,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard !isTesting else { return }
         NSApp.mainMenu = makeMainMenu()
         Theme.applySaved()
+        // Tooltips (the dots' From All keyboards state) show after 250 ms instead of about a second.
+        UserDefaults.standard.register(defaults: ["NSInitialToolTipDelay": 250])
         statusMenu = StatusMenu(model: model, monitor: monitor, updater: updater, detector: detector,
                                 onOpen: { [weak self] in self?.showMainWindow() },
                                 onAbout: { [weak self] in self?.showAbout() })

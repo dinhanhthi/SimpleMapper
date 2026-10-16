@@ -29,9 +29,10 @@ enum Remapper {
     }
 
     /// Global All list first, then the merged list of every previous or mapped keyboard (a stale one gets the All list).
-    /// `applied` is the keyboards with at least one enabled mapping.
+    /// `applied` is the keyboards with their own rows or excluded keys (a disabled row also changes what that
+    /// keyboard gets).
     static func applyCommands(_ settings: Settings, previous: Set<Scope>) -> (commands: [[String]], applied: Set<Scope>) {
-        let applied = Set(settings.keyboards.map(\.device.scope).filter { $0 != .all && !Settings.dedupe(settings.list(for: $0)).isEmpty })
+        let applied = Set(settings.keyboards.filter { !$0.isEmpty }.map(\.device.scope).filter { $0 != .all })
         let deviceCommands = sorted(previous.union(applied)).map { arguments(set: mappingJSON(settings.merged(for: $0)), scope: $0) }
         return ([arguments(set: mappingJSON(Settings.dedupe(settings.all)), scope: .all)] + deviceCommands, applied)
     }

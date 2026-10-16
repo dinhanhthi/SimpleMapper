@@ -55,9 +55,20 @@ struct MainView: View {
                     .help("Import settings")
                 Button(action: exportSettings) { Label("Export…", systemImage: "square.and.arrow.up") }
                     .help("Export settings")
-                Button(action: newMapping) { Label("New mapping", systemImage: "plus") }
-                    .help("New mapping")
             }
+            // In a narrow window the other buttons go to the overflow menu first.
+            if #available(macOS 26.1, *) {
+                newMappingItem.visibilityPriority(.high)
+            } else {
+                newMappingItem
+            }
+        }
+    }
+
+    private var newMappingItem: some ToolbarContent {
+        ToolbarItem {
+            Button(action: newMapping) { Label("New mapping", systemImage: "plus") }
+                .help("New mapping")
         }
     }
 
@@ -85,26 +96,36 @@ struct MainView: View {
 
     // MARK: Mappings
 
-    @ViewBuilder private var mappingList: some View {
-        let list = model.settings.list(for: current)
-        VStack(alignment: .leading, spacing: 8) {
-            let inherited = Settings.dedupe(model.settings.all).count
-            if current != .all && inherited > 0 {
-                Text("Also uses \(inherited) \(inherited == 1 ? "mapping" : "mappings") from All keyboards; the same From key here wins.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 4)
+    /// The list for `current`. For a keyboard: the All list without its excluded keys, each row replaced by the
+    /// keyboard's own row with the same From key (else marked inherited), then the keyboard's other rows.
+    private var shownRows: [(mapping: Mapping, inherited: Bool)] {
+        let own = model.settings.list(for: current)
+        guard current != .all else { return own.map { ($0, false) } }
+        let excluded = Set(model.settings.excluded(for: current))
+        var rows: [(mapping: Mapping, inherited: Bool)] = []
+        var froms = Set<UInt64>()
+        for mapping in model.settings.all where froms.insert(mapping.from).inserted {
+            if let mine = own.first(where: { $0.from == mapping.from }) {
+                rows.append((mine, false))
+            } else if !excluded.contains(mapping.from), let followed = model.settings.allMapping(from: mapping.from) {
+                rows.append((followed, true))
             }
-            if list.isEmpty {
+        }
+        return rows + own.filter { mine in !rows.contains { $0.mapping.id == mine.id } }.map { ($0, false) }
+    }
+
+    @ViewBuilder private var mappingList: some View {
+        let rows = shownRows
+        VStack(alignment: .leading, spacing: 8) {
+            if rows.isEmpty {
                 Text("No mappings yet. Click + to add one.")
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 24)
             } else {
                 GlassCards {
-                    VStack(spacing: 8) {
-                        ForEach(list) { row($0) }
+                    VStack(spacing: 14) {
+                        ForEach(rows, id: \.mapping.id) { row($0.mapping, inherited: $0.inherited) }
                     }
                 }
             }
@@ -118,21 +139,62 @@ struct MainView: View {
         }
     }
 
-    private func row(_ mapping: Mapping) -> some View {
-        HStack(spacing: 8) {
-            KeyMenu(usage: mapping.from, tint: .from) { model.setFrom($0, for: mapping.id, in: current) }
+    /// An inherited row is an All row shown for a keyboard; changing its From, To or switch gives the keyboard its
+    /// own copy, which later All changes no longer affect. For a keyboard, a row whose From key the All list maps
+    /// has a dot: green when its To and switch equal the All mapping, else gray (a click takes the All values).
+    private func row(_ mapping: Mapping, inherited: Bool) -> some View {
+        let followed = current == .all ? nil : model.settings.allMapping(from: mapping.from)
+        let sameAsAll = followed.map { $0.to == mapping.to && $0.enabled == mapping.enabled } ?? false
+        return HStack(spacing: 8) {
+            KeyMenu(usage: mapping.from, tint: .from) { model.setFrom($0, for: mapping, in: device(for: current)) }
             Image(systemName: "arrow.right")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
-            KeyMenu(usage: mapping.to, tint: .to) { model.setTo($0, for: mapping.id, in: current) }
+            KeyMenu(usage: mapping.to, tint: .to) { to in
+                if inherited {
+                    model.override(from: mapping.from, to: to, enabled: mapping.enabled, in: device(for: current))
+                } else {
+                    model.setTo(to, for: mapping.id, in: current)
+                }
+            }
             Spacer(minLength: 8)
+            if followed != nil {
+                // Not disabled while green, so its tooltip still shows.
+                Button { if !sameAsAll { model.useAll(mapping.from, in: current) } } label: {
+                    Circle()
+                        .fill(sameAsAll ? Color.green : CompactSwitch.offFill)
+                        .frame(width: CompactSwitch.height, height: CompactSwitch.height)
+                }
+                .buttonStyle(.plain)
+                .help(sameAsAll ? "From All keyboards: ON" : "From All keyboards: OFF (click to use All keyboards)")
+            }
+            if current == .all {
+                Button { confirmApplyToAllKeyboards(mapping) } label: {
+                    Label("Apply to every keyboard", systemImage: "square.stack.3d.down.forward")
+                        .labelStyle(.iconOnly)
+                        .font(.system(size: 15))
+                        .frame(height: CompactSwitch.height)
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.secondary)
+                .help("Apply to every keyboard")
+            }
             Toggle("Enabled", isOn: Binding(
                 get: { mapping.enabled },
-                set: { model.setEnabled($0, for: mapping.id, in: current) }
+                set: { enabled in
+                    if inherited {
+                        model.override(from: mapping.from, to: mapping.to, enabled: enabled, in: device(for: current))
+                    } else {
+                        model.setEnabled(enabled, for: mapping.id, in: current)
+                    }
+                }
             ))
             .toggleStyle(CompactSwitch())
-            Button { model.remove(mapping.id, in: current) } label: {
-                Label("Remove", systemImage: "trash").labelStyle(.iconOnly)
+            Button { confirmRemove(mapping) } label: {
+                Label("Remove", systemImage: "trash")
+                    .labelStyle(.iconOnly)
+                    .font(.system(size: 15))
+                    .frame(height: CompactSwitch.height)
             }
             .buttonStyle(.borderless)
             .foregroundStyle(.secondary)
@@ -141,6 +203,37 @@ struct MainView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .modifier(GlassCard(cornerRadius: 20))
+    }
+
+    /// Asks first. For a keyboard, a key the All list maps is excluded there, so its All mapping is not used either.
+    /// Asks first, naming the keyboards that use their own mapping for this key or removed it.
+    private func confirmApplyToAllKeyboards(_ mapping: Mapping) {
+        let names = model.settings.keyboardsNotFollowingAll(mapping.from).map(\.name)
+        let alert = NSAlert()
+        alert.messageText = "Apply \(KeyMenu.label(mapping.from)) → \(KeyMenu.label(mapping.to)) to every keyboard?"
+        alert.informativeText = names.isEmpty
+            ? "Every keyboard already uses it."
+            : "These keyboards drop their own mapping for this key and use this one: \(names.joined(separator: ", "))."
+        alert.addButton(withTitle: "Apply")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        model.applyToAllKeyboards(mapping.from)
+    }
+
+    private func confirmRemove(_ mapping: Mapping) {
+        let alert = NSAlert()
+        alert.messageText = "Remove \(KeyMenu.label(mapping.from)) → \(KeyMenu.label(mapping.to))?"
+        alert.informativeText = current == .all
+            ? "It is removed from All keyboards."
+            : "It is removed from this keyboard only. Click + to add it again."
+        alert.addButton(withTitle: "Remove").hasDestructiveAction = true
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        if let device = device(for: current), model.settings.allMapping(from: mapping.from) != nil {
+            model.exclude(mapping.from, in: device)
+        } else {
+            model.remove(mapping.id, in: current)
+        }
     }
 
     private func newMapping() {
@@ -290,12 +383,13 @@ struct KeyCap: ViewModifier {
 
 /// A small on/off switch; the system switch stays wide even at `.mini` on macOS 26.
 struct CompactSwitch: ToggleStyle {
-    private static let offFill = Color(light: .black.withAlphaComponent(0.18), dark: .white.withAlphaComponent(0.22))
+    static let height: CGFloat = 19
+    static let offFill = Color(light: .black.withAlphaComponent(0.18), dark: .white.withAlphaComponent(0.22))
 
     func makeBody(configuration: Configuration) -> some View {
         Capsule()
             .fill(configuration.isOn ? Color.accentColor : Self.offFill)
-            .frame(width: 26, height: 15)
+            .frame(width: 34, height: Self.height)
             .overlay(alignment: configuration.isOn ? .trailing : .leading) {
                 Circle()
                     .fill(.white)

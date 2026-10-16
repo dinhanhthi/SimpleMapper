@@ -47,6 +47,22 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(decoded.encoded(), settings.encoded())
     }
 
+    func testExcludedRoundTripsAndIsOmittedWhenEmpty() throws {
+        let settings = Settings(modifiedAt: .distantPast, all: [], keyboards: [
+            DeviceMappings(device: keyboard, mappings: [], excluded: [grave]),
+        ])
+        XCTAssertEqual(try Settings.decode(settings.encoded()).keyboards.map(\.excluded), [[grave]])
+        let plain = Settings(modifiedAt: .distantPast, all: [], keyboards: [
+            DeviceMappings(device: keyboard, mappings: [Mapping(from: keyA, to: keyB, enabled: true)]),
+        ])
+        XCTAssertFalse(String(decoding: plain.encoded(), as: UTF8.self).contains("excluded"))
+    }
+
+    func testDecodeRejectsInvalidExcludedUsage() {
+        let data = Data(#"{"version": 1, "modifiedAt": "2026-10-15T10:00:00Z", "all": [], "keyboards": [{"device": {"vendorID": 1, "productID": 2, "builtIn": false, "name": "K"}, "mappings": [], "excluded": [30064771073]}]}"#.utf8)
+        assertRejects(data, with: .invalidKey(0x700000001))
+    }
+
     func testRoundTripKeepsDistantPast() throws {
         XCTAssertEqual(try Settings.decode(Settings.empty.encoded()).modifiedAt, .distantPast)
     }
@@ -220,6 +236,128 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(pairs(settings.merged(for: keyboard.scope)), [[grave, backslash], [keyA, fn], [keyB, keyA]])
         XCTAssertEqual(pairs(settings.merged(for: .all)), [[grave, backslash], [keyA, keyB]])
         XCTAssertEqual(pairs(settings.merged(for: .device(vendorID: 9, productID: 9, builtIn: false))), [[grave, backslash], [keyA, keyB]])
+    }
+
+    func testDisabledDeviceRowUnmapsTheAllKeyOnThatKeyboard() {
+        let settings = Settings(
+            modifiedAt: .distantPast,
+            all: [Mapping(from: grave, to: backslash, enabled: true), Mapping(from: keyA, to: keyB, enabled: true)],
+            keyboards: [DeviceMappings(device: keyboard, mappings: [Mapping(from: grave, to: backslash, enabled: false)])]
+        )
+        XCTAssertEqual(pairs(settings.merged(for: keyboard.scope)), [[keyA, keyB]])
+        XCTAssertEqual(Remapper.applyCommands(settings, previous: []).applied, [keyboard.scope])
+    }
+
+    func testExcludedAllKeyIsNotMappedOnThatKeyboard() {
+        let settings = Settings(
+            modifiedAt: .distantPast,
+            all: [Mapping(from: grave, to: backslash, enabled: true), Mapping(from: keyA, to: keyB, enabled: true)],
+            keyboards: [DeviceMappings(device: keyboard, mappings: [], excluded: [grave])]
+        )
+        XCTAssertEqual(pairs(settings.merged(for: keyboard.scope)), [[keyA, keyB]])
+        XCTAssertEqual(pairs(settings.merged(for: .all)), [[grave, backslash], [keyA, keyB]])
+        XCTAssertEqual(Remapper.applyCommands(settings, previous: []).applied, [keyboard.scope])
+    }
+
+    func testFollowAllDropsOnlyTheEditedRowWhenEqualToAll() {
+        var settings = Settings(
+            modifiedAt: .distantPast,
+            // All was changed to grave → keyA after the keyboard overrode it with the same value.
+            all: [Mapping(from: grave, to: keyA, enabled: true), Mapping(from: keyA, to: keyB, enabled: true)],
+            keyboards: [DeviceMappings(device: keyboard, mappings: [
+                Mapping(from: grave, to: keyA, enabled: true),
+                Mapping(from: keyA, to: keyB, enabled: true),
+            ], excluded: [fn])]
+        )
+        settings.followAll(keyA, in: keyboard.scope)
+        XCTAssertEqual(rows(settings.list(for: keyboard.scope)), [[grave, keyA, 1]])
+        settings.followAll(grave, in: .all)
+        XCTAssertEqual(rows(settings.list(for: keyboard.scope)), [[grave, keyA, 1]])
+        settings.followAll(fn, in: keyboard.scope)
+        XCTAssertEqual(settings.excluded(for: keyboard.scope), [])
+    }
+
+    func testFollowAllKeepsARowThatDiffersInToOrSwitch() {
+        var settings = Settings(
+            modifiedAt: .distantPast,
+            all: [Mapping(from: grave, to: keyA, enabled: true), Mapping(from: keyA, to: keyB, enabled: true)],
+            keyboards: [DeviceMappings(device: keyboard, mappings: [
+                Mapping(from: grave, to: keyB, enabled: true),
+                Mapping(from: keyA, to: keyB, enabled: false),
+            ])]
+        )
+        settings.followAll(grave, in: keyboard.scope)
+        settings.followAll(keyA, in: keyboard.scope)
+        XCTAssertEqual(rows(settings.list(for: keyboard.scope)), [[grave, keyB, 1], [keyA, keyB, 0]])
+    }
+
+    func testShowsOwnRowsAndTheAllKeysAKeyboardUses() {
+        let settings = Settings(
+            modifiedAt: .distantPast,
+            all: [Mapping(from: grave, to: keyA, enabled: true), Mapping(from: keyA, to: keyB, enabled: true)],
+            keyboards: [DeviceMappings(device: keyboard, mappings: [Mapping(from: fn, to: keyA, enabled: true)],
+                                       excluded: [keyA])]
+        )
+        XCTAssertTrue(settings.shows(grave, in: .all))
+        XCTAssertFalse(settings.shows(fn, in: .all))
+        XCTAssertTrue(settings.shows(grave, in: keyboard.scope))
+        XCTAssertTrue(settings.shows(fn, in: keyboard.scope))
+        XCTAssertFalse(settings.shows(keyA, in: keyboard.scope))
+        XCTAssertFalse(settings.shows(keyB, in: keyboard.scope))
+    }
+
+    func testRemoveFromAllDropsEqualKeyboardRowsAndKeepsOverrides() {
+        let other = KeyboardDevice(vendorID: 1, productID: 2, builtIn: false, name: "Other")
+        let removed = Mapping(from: grave, to: keyA, enabled: true)
+        var settings = Settings(
+            modifiedAt: .distantPast,
+            all: [removed, Mapping(from: keyA, to: keyB, enabled: true)],
+            keyboards: [
+                DeviceMappings(device: keyboard, mappings: [Mapping(from: grave, to: keyA, enabled: true)]),
+                DeviceMappings(device: other, mappings: [Mapping(from: grave, to: keyB, enabled: true)]),
+            ]
+        )
+        settings.removeFromAll(removed)
+        XCTAssertEqual(rows(settings.all), [[keyA, keyB, 1]])
+        XCTAssertEqual(rows(settings.list(for: keyboard.scope)), [])
+        XCTAssertEqual(rows(settings.list(for: other.scope)), [[grave, keyB, 1]])
+    }
+
+    func testApplyToAllKeyboardsDropsOverridesAndExclusionsOfThatKey() {
+        let other = KeyboardDevice(vendorID: 1, productID: 2, builtIn: false, name: "Other")
+        var settings = Settings(
+            modifiedAt: .distantPast,
+            all: [Mapping(from: grave, to: keyA, enabled: true), Mapping(from: keyA, to: keyB, enabled: true)],
+            keyboards: [
+                DeviceMappings(device: keyboard, mappings: [
+                    Mapping(from: grave, to: keyB, enabled: true),
+                    Mapping(from: keyA, to: fn, enabled: true),
+                ]),
+                DeviceMappings(device: other, mappings: [], excluded: [grave]),
+            ]
+        )
+        XCTAssertEqual(settings.keyboardsNotFollowingAll(grave), [keyboard, other])
+        settings.applyToAllKeyboards(grave)
+        XCTAssertEqual(settings.keyboardsNotFollowingAll(grave), [])
+        XCTAssertEqual(rows(settings.list(for: keyboard.scope)), [[keyA, fn, 1]])
+        XCTAssertEqual(settings.excluded(for: other.scope), [])
+    }
+
+    func testTidyDropsStaleOrOverlappingExclusionsAndEmptyKeyboards() {
+        let empty = KeyboardDevice(vendorID: 1, productID: 2, builtIn: false, name: "Empty")
+        var settings = Settings(
+            modifiedAt: .distantPast,
+            all: [Mapping(from: grave, to: keyA, enabled: true), Mapping(from: keyA, to: keyB, enabled: true)],
+            keyboards: [
+                // grave: kept; keyA: has its own row; fn: no longer in All.
+                DeviceMappings(device: keyboard, mappings: [Mapping(from: keyA, to: fn, enabled: true)],
+                               excluded: [grave, keyA, fn]),
+                DeviceMappings(device: empty, mappings: [], excluded: [fn]),
+            ]
+        )
+        settings.tidy()
+        XCTAssertEqual(settings.keyboards.map(\.device), [keyboard])
+        XCTAssertEqual(settings.excluded(for: keyboard.scope), [grave])
     }
 
     func testActiveCountDoesNotDoubleCountOverrides() {

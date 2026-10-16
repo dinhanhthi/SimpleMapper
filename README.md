@@ -23,7 +23,7 @@
 ## Features
 
 - Remap any key to any other key ([key names](docs/KEYS.md), as in Karabiner-Elements).
-- Mappings for all keyboards or per keyboard; a keyboard's own mapping wins over the All one.
+- Mappings for all keyboards or per keyboard; a keyboard's own mapping wins over the All one ([how](#all-keyboards-and-one-keyboard)).
 - On/off switch per mapping, and Detect key to identify a key or its keyboard.
 - Import/export as JSON, with an automatic iCloud Drive backup.
 - Menu bar status, Launch at login, automatic updates.
@@ -45,6 +45,15 @@ flowchart LR
 - SimpleMapper sets Apple's `UserKeyMapping` with `/usr/bin/hidutil` ([equivalent commands](docs/KEYS.md#equivalent-command)). Mappings are re-applied at launch and when a keyboard connects; Quit clears them.
 - Settings live in `~/Library/Application Support/SimpleMapper/settings.json`, copied to `iCloud Drive/SimpleMapper/` on every save. The iCloud copy is read only when the local file is missing (reinstall, new Mac); there is no live sync between Macs.
 - Only Detect key needs Input Monitoring, and it listens for a single key (10 seconds max).
+
+### All keyboards and one keyboard
+
+- A keyboard's list shows every All mapping it has not deleted (its own row replaces the All one on the same key), plus its own. A From key appears once per list: adding it a second time is refused.
+- On a keyboard, a card whose From key is in the All list has a dot: green when its To and on/off equal the All mapping, gray when they differ. Clicking a gray dot takes the All values again.
+- Changing a card's From, To or switch on a keyboard gives that keyboard its own copy, which later All edits no longer change. Picking the All values again makes it follow All. Switching a card off on a keyboard turns that key off there, even if All maps it.
+- Deleting a card on a keyboard removes that key from this keyboard only (the All mapping no longer applies there); + adds it back.
+- Deleting an All mapping also removes its green cards on every keyboard; gray cards (own values) stay.
+- In All keyboards, the stack button on a card makes every keyboard use that mapping again (after a confirmation): their own copies and deletions of that key are dropped.
 
 ## Resource usage
 
