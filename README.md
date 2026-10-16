@@ -44,10 +44,11 @@ SimpleMapper updates itself via Sparkle. To check manually, use Check for Update
 
 ### The window
 
-- **Keyboard** dropdown (top): All keyboards, or one connected keyboard. A keyboard with saved mappings stays in the list, marked "(not connected)", while it is unplugged.
+- **Keyboard** dropdown (toolbar, left): All keyboards, or one connected keyboard. A keyboard with saved mappings stays in the list, marked "(not connected)", while it is unplugged.
 - **List**: one row per mapping, From, an arrow and To. Click a key to change it. Each row has an on/off switch and a delete button.
-- **New mapping**: choose From and To, then Add. **Detect key** lets you press a key instead of searching for it, then use it as From, as To, or select its keyboard. Add replaces the To key when that From key is already in the list.
-- **Import / Export** (bottom right): save the settings to a JSON file, or replace everything from one.
+- **+** (toolbar, right) opens **New mapping**: choose From and To, then Add. **Detect key** lets you press a key instead of searching for it, then use it as From, as To, or select its keyboard. Add replaces the To key when that From key is already in the list.
+- **Theme** (toolbar, sun or moon icon): switch between Light and Dark; SimpleMapper follows the system appearance until you use it.
+- **Import / Export** (toolbar icons, next to +): save the settings to a JSON file, or replace everything from one.
 
 ### The menu bar
 

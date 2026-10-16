@@ -26,6 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private var statusMenu: StatusMenu?
     private var window: NSWindow?
+    private var newMappingWindow: NSWindow?
     private var devicesSink: AnyCancellable?
     private var sigtermSource: DispatchSourceSignal?
 
@@ -34,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard !isTesting else { return }
         NSApp.mainMenu = makeMainMenu()
+        Theme.applySaved()
         statusMenu = StatusMenu(model: model, monitor: monitor, updater: updater, detector: detector,
                                 onOpen: { [weak self] in self?.showMainWindow() },
                                 onAbout: { [weak self] in self?.showAbout() })
@@ -86,9 +88,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func showMainWindow() {
         if window == nil {
-            let window = NSWindow(contentViewController: NSHostingController(rootView: MainView(model: model, monitor: monitor, detector: detector)))
+            let hosting = NSHostingController(rootView: MainView(model: model, monitor: monitor, detector: detector,
+                                                                 onNewMapping: { [weak self] in self?.showNewMapping($0) }))
+            // The SwiftUI toolbar (keyboard picker, import/export, +) becomes the window's toolbar.
+            hosting.sceneBridgingOptions = [.toolbars]
+            let window = NSWindow(contentViewController: hosting)
             window.title = "SimpleMapper"
-            window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+            window.titleVisibility = .hidden
+            window.toolbarStyle = .unified
+            // One background for the toolbar and the list, without a line between them.
+            window.titlebarAppearsTransparent = true
+            window.titlebarSeparatorStyle = .none
+            // Full size content: the translucent background runs under the toolbar too.
+            window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
             window.isReleasedWhenClosed = false
             if !window.setFrameAutosaveName("Main") || !window.setFrameUsingName("Main") {
                 window.center()
@@ -97,6 +109,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self.window = window
         }
         bringToFront(window)
+    }
+
+    /// Shows `view` in a small "New mapping" window above the main window; one at a time.
+    private func showNewMapping(_ view: NewMappingView) {
+        if let newMappingWindow {
+            newMappingWindow.makeKeyAndOrderFront(nil)
+            return
+        }
+        guard let window else { return }
+        var view = view
+        view.close = { [weak self] in self?.newMappingWindow?.close() }
+        let hosting = NSHostingController(rootView: view)
+        let panel = NSWindow(contentViewController: hosting)
+        panel.title = "New mapping"
+        panel.styleMask = [.titled, .closable]
+        // Sized now, not on the first layout, so the position below is computed from the final size.
+        panel.setContentSize(hosting.view.fittingSize)
+        panel.isReleasedWhenClosed = false
+        panel.delegate = self
+        window.addChildWindow(panel, ordered: .above)
+        // Near the main window's bottom edge; it grows upward when the detected key row shows.
+        panel.setFrameOrigin(NSPoint(x: window.frame.midX - panel.frame.width / 2, y: window.frame.minY + 24))
+        newMappingWindow = panel
+        panel.makeKeyAndOrderFront(nil)
     }
 
     /// Shows the Dock icon and activates the app on the next turn (the `.regular` switch from LSUIElement is
@@ -115,6 +151,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         detector.stop()
         detector.detected = nil
         detector.hint = nil
+        if let closing = notification.object as? NSWindow, closing === newMappingWindow {
+            window?.removeChildWindow(closing)
+            DispatchQueue.main.async { [weak self] in self?.newMappingWindow = nil }
+            return
+        }
+        newMappingWindow?.close()
         // Release the window and its SwiftUI hierarchy after it finishes closing; it is recreated on the next open.
         DispatchQueue.main.async { [weak self] in
             self?.window = nil

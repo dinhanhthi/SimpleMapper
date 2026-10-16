@@ -10,9 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Menu bar menu shows whether Input Monitoring (needed by Detect key) is granted, with Grant Input Monitoring… to ask for it.
+- Theme button in the main window's toolbar to switch between Light and Dark (the system appearance until it is used).
 
 ### Changed
 
+- Main window redesigned with Liquid Glass: the keyboard picker sits in the toolbar next to the window buttons, Import, Export and + (New mapping) are icons on the right, and the window shows only the mapping list, one rounded row per mapping with a compact on/off switch. Long key names end with an ellipsis.
+- New mapping opens in its own small window from +; detected keys show in a key-cap box.
 - Requires macOS 14 or later.
 
 ## [1.0.0] - 2026-10-16

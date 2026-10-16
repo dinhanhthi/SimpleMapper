@@ -70,7 +70,8 @@ Never pass `-derivedDataPath` to local `xcodebuild` builds and tests. The defaul
 ## Code layout
 
 - `SimpleMapper/SimpleMapperApp.swift`: AppKit entry point (no SwiftUI `App`), the main window and About panel, applies the mappings at launch and clears them on quit.
-- `SimpleMapper/MainView.swift`: the main window in SwiftUI (keyboard picker, mapping list, New mapping with Detect key, Import and Export).
+- `SimpleMapper/MainView.swift`: the main window in SwiftUI (toolbar with the keyboard picker, Import, Export and +; the mapping list).
+- `SimpleMapper/NewMappingView.swift`: the New mapping window (From, To, Detect key).
 - `SimpleMapper/MenuBarView.swift`: the menu bar menu, an AppKit `StatusMenu` (no SwiftUI, for a small footprint).
 - `SimpleMapper/AppModel.swift`: app state, editing rules, import/export, launch at login.
 - `SimpleMapper/Settings.swift`: the settings model, JSON codec, validation and merge.
