@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-16
+
 ### Added
 
 - Main window with a mapping list per keyboard: an All keyboards list plus one list per keyboard (built-in or external); the keyboard's own entry wins on the same From key.
