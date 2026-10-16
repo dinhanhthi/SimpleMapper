@@ -34,10 +34,9 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: SimpleMapper
         INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Anh-Thi Dinh"
         SWIFT_VERSION: "5.0"
-      configs:
-        Release:
-          CODE_SIGN_STYLE: Manual
-          CODE_SIGN_IDENTITY: "Developer ID Application"
+        # Debug is Developer ID-signed too, so Debug and Release share one Input Monitoring grant.
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "Developer ID Application"
   SimpleMapperTests:
     type: bundle.unit-test
     platform: macOS

@@ -29,6 +29,14 @@ scripts/dev.sh           # xcodegen generate, Debug build, launch
 scripts/dev.sh --clean   # clean build first
 ```
 
+Debug is signed with the same "Developer ID Application" identity as Release, so Debug (Xcode's Run) and the installed DMG build share one Input Monitoring grant. `scripts/dev.sh` and `scripts/screenshots.sh` therefore need that certificate; without it, build with your own identity:
+
+```sh
+xcodebuild -project SimpleMapper.xcodeproj -scheme SimpleMapper CODE_SIGN_STYLE=Automatic CODE_SIGN_IDENTITY="Apple Development" DEVELOPMENT_TEAM=<your team>
+```
+
+If Detect key says access is needed while SimpleMapper is already on in Input Monitoring, the grant belongs to a differently signed build: run `tccutil reset ListenEvent dinh.thi.SimpleMapper`, relaunch and allow it again.
+
 Quit Karabiner-Elements while testing: it seizes keyboards, so `hidutil` mappings have no effect while it runs.
 
 ## Tests
