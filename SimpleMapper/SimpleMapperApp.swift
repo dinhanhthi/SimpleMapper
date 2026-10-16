@@ -90,7 +90,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func showMainWindow() {
         if window == nil {
-            let hosting = NSHostingController(rootView: MainView(model: model, monitor: monitor, detector: detector,
+            let hosting = NSHostingController(rootView: MainView(model: model, monitor: monitor, detector: detector, updater: updater,
                                                                  onNewMapping: { [weak self] in self?.showNewMapping($0) }))
             // The SwiftUI toolbar (keyboard picker, import/export, +) becomes the window's toolbar.
             hosting.sceneBridgingOptions = [.toolbars]

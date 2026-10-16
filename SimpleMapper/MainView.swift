@@ -7,6 +7,7 @@ struct MainView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var monitor: KeyboardMonitor
     @ObservedObject var detector: KeyDetector
+    @ObservedObject var updater: Updater
     /// Shows the New mapping window.
     let onNewMapping: (NewMappingView) -> Void
     @StateObject private var selection = KeyboardSelection()
@@ -39,6 +40,13 @@ struct MainView: View {
                 }
                 .help("Keyboard")
             }
+            if updater.updateAvailable {
+                if #available(macOS 26.1, *) {
+                    updateItem.visibilityPriority(.high)
+                } else {
+                    updateItem
+                }
+            }
             // Pushes the buttons to the trailing edge.
             if #available(macOS 26, *) {
                 ToolbarSpacer(.flexible)
@@ -62,6 +70,19 @@ struct MainView: View {
             } else {
                 newMappingItem
             }
+        }
+    }
+
+    /// Green, icon-only; shown once Sparkle finds an update, it opens Sparkle's update dialog.
+    private var updateItem: some ToolbarContent {
+        ToolbarItem(placement: .navigation) {
+            Button(action: updater.checkForUpdates) {
+                Label("Update", systemImage: "arrow.down.circle")
+                    .labelStyle(.iconOnly)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.green)
+            .help("A new version is available")
         }
     }
 

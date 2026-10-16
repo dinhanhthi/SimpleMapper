@@ -52,7 +52,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             menu.addItem(item("Grant Input Monitoring…", #selector(grantAccess)))
         }
         menu.addItem(.separator())
-        let update = item("Check for Updates…", #selector(checkForUpdates))
+        let update = item(updater.updateAvailable ? "Update Available…" : "Check for Updates…", #selector(checkForUpdates))
         update.isEnabled = updater.canCheck
         menu.addItem(update)
         menu.addItem(item("About SimpleMapper", #selector(about)))
