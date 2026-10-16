@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-16
+
+### Added
+
+- Key menus have Detect auto…, which opens a sheet that detects the next key press so you can use it right away.
+- Each keyboard's list also shows the All keyboards mappings. Changing one on a keyboard gives that keyboard its own copy; a dot shows whether it still matches All (click a gray dot to take the All values again), and the stack button in All keyboards makes every keyboard use that mapping again.
+
+### Changed
+
+- Buttons in the New mapping window are capsules, and row icon buttons react on hover and press.
+- The About window spaces out its description, link and license lines.
+
+### Fixed
+
+- Detect key shows Grant Access… when Input Monitoring is missing or no longer valid.
+
 ## [1.1.0] - 2026-10-16
 
 ### Added
