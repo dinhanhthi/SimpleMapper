@@ -175,6 +175,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         bringToFront(nil)
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .center
+        paragraph.paragraphSpacing = 6
         let font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
         let url = "https://github.com/dinhanhthi/SimpleMapper"
         let credits = NSMutableAttributedString(string: "A lightweight key remapper for macOS.\n\(url)\nMIT License",
