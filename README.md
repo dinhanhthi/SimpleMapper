@@ -4,7 +4,7 @@
 
 # SimpleMapper
 
-**A lightweight key remapper for macOS and a simple alternative to Karabiner-Elements: remap keys for all keyboards or per keyboard, from a clean window, with iCloud-synced settings.**
+**A lightweight key remapper for macOS, a simple alternative to Karabiner-Elements.**
 
 [![Latest release](https://img.shields.io/github/v/release/dinhanhthi/SimpleMapper)](https://github.com/dinhanhthi/SimpleMapper/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/dinhanhthi/SimpleMapper/total)](https://github.com/dinhanhthi/SimpleMapper/releases)
@@ -22,49 +22,16 @@
 
 ## Features
 
-- Remap any key to any other key, named as in Karabiner-Elements ([full list](docs/KEYS.md)).
-- Mappings for All keyboards or for a specific keyboard, built-in or external. When both define the same From key, the keyboard's own mapping wins.
-- On/off switch per mapping.
-- Detect key: press a key to identify it, or to select the keyboard it came from.
-- Import and export the settings as JSON.
-- Settings are backed up to iCloud Drive and restored after a reinstall or on a new Mac.
-- Menu bar status ("N mappings active"), Launch at login, automatic updates (Sparkle).
-- Light on resources, see [Resource usage](#resource-usage).
-- No kernel extension, no driver, no Accessibility permission.
+- Remap any key to any other key ([key names](docs/KEYS.md), as in Karabiner-Elements).
+- Mappings for all keyboards or per keyboard; a keyboard's own mapping wins over the All one.
+- On/off switch per mapping, and Detect key to identify a key or its keyboard.
+- Import/export as JSON, with an automatic iCloud Drive backup.
+- Menu bar status, Launch at login, automatic updates.
+- [Light on resources](#resource-usage). No kernel extension, driver or Accessibility permission.
 
 ## Install
 
-1. Download the notarized `SimpleMapper-X.Y.Z.dmg` from [GitHub Releases](https://github.com/dinhanhthi/SimpleMapper/releases/latest).
-2. Open it and drag SimpleMapper to `/Applications`.
-3. Launch it. The window opens; a fresh install has no mappings yet.
-
-SimpleMapper updates itself via Sparkle. To check manually, use Check for Updates in the menu bar menu. Requires macOS 14 or later.
-
-## Usage
-
-### The window
-
-- **Keyboard** dropdown (toolbar, left): All keyboards, or one connected keyboard. A keyboard with saved mappings stays in the list, marked "(not connected)", while it is unplugged.
-- **List**: one row per mapping, From, an arrow and To. Click a key to change it. Each row has an on/off switch and a delete button.
-- **+** (toolbar, right) opens **New mapping**: choose From and To, then Add. **Detect key** lets you press a key instead of searching for it, then use it as From, as To, or select its keyboard. Add replaces the To key when that From key is already in the list.
-- **Theme** (toolbar, sun or moon icon): switch between Light and Dark; SimpleMapper follows the system appearance until you use it.
-- **Import / Export** (toolbar icons, next to +): save the settings to a JSON file, or replace everything from one.
-
-### The menu bar
-
-SimpleMapper lives in the menu bar. Its menu has:
-
-- Open SimpleMapper
-- Launch at login
-- "N mappings active" (or the last error)
-- "Input Monitoring: granted" or "not granted", with Grant Input Monitoring... while it is not granted (only Detect key needs it)
-- Check for Updates...
-- About SimpleMapper
-- Quit, with a "Sure to quit" item so you do not quit by accident
-
-<img src="assets/screenshots/about.png" width="284" alt="The SimpleMapper About panel">
-
-The Dock icon shows only while the window is open; closing the window leaves the menu bar icon. With Launch at login on, SimpleMapper starts in the menu bar only.
+Download the `.dmg` from [Releases](https://github.com/dinhanhthi/SimpleMapper/releases/latest), drag SimpleMapper to `/Applications` and launch it. Requires macOS 14 or later; updates come through Sparkle.
 
 ## How it works
 
@@ -75,15 +42,13 @@ flowchart LR
     S <-->|"copy on save,<br/>restore when the local file is missing"| C[("iCloud Drive copy")]
 ```
 
-- SimpleMapper sets Apple's `UserKeyMapping` with `/usr/bin/hidutil`. First the All list is set for every keyboard, then each keyboard with its own list gets the merged list. The equivalent commands are in [docs/KEYS.md](docs/KEYS.md#equivalent-command).
-- `hidutil` mappings do not survive a restart, so the app re-applies them at launch and whenever a keyboard is connected. Quit clears them.
-- Settings live in `~/Library/Application Support/SimpleMapper/settings.json`. Every save also copies the file to `~/Library/Mobile Documents/com~apple~CloudDocs/SimpleMapper/settings.json` when iCloud Drive is on. The iCloud copy is read only when the local file is missing, which restores your settings after a reinstall or on a new Mac.
-- There is no live sync between running Macs: the Mac that saved last owns the iCloud copy.
-- Detect key asks for Input Monitoring the first time you use it. It listens only until one key is pressed (or 10 seconds pass), then stops.
+- SimpleMapper sets Apple's `UserKeyMapping` with `/usr/bin/hidutil` ([equivalent commands](docs/KEYS.md#equivalent-command)). Mappings are re-applied at launch and when a keyboard connects; Quit clears them.
+- Settings live in `~/Library/Application Support/SimpleMapper/settings.json`, copied to `iCloud Drive/SimpleMapper/` on every save. The iCloud copy is read only when the local file is missing (reinstall, new Mac); there is no live sync between Macs.
+- Only Detect key needs Input Monitoring, and it listens for a single key (10 seconds max).
 
 ## Resource usage
 
-Both apps doing the same job (one mapping, `non_us_backslash` → `grave_accent_and_tilde`), measured on 2026-10-16 with macOS 27.0.1, SimpleMapper 1.0.0 and Karabiner-Elements 16.3.0. Memory is the `top` MEM column.
+One mapping (`non_us_backslash` → `grave_accent_and_tilde`), measured on 2026-10-16 with macOS 27.0.1, SimpleMapper 1.0.0 and Karabiner-Elements 16.3.0 (`top` MEM column).
 
 | State | SimpleMapper | Karabiner-Elements (all processes) |
 | --- | --- | --- |
@@ -91,30 +56,21 @@ Both apps doing the same job (one mapping, `non_us_backslash` → `grave_accent_
 | Settings window open | **34 MB**, 0% CPU | **130 MB**, ~1% CPU |
 | Typing, window closed | **34 MB**, 0% CPU | **73 MB**, 2.3% CPU |
 
-- Typing costs SimpleMapper nothing: macOS (`hidutil`) does the remapping, while Karabiner-Elements handles every key event itself.
-- Once opened, the window keeps SwiftUI and Metal loaded (about 20 MB) until the next launch, hence 34 MB in the typing row.
-
-Numbers vary by Mac and macOS version. To compare on yours, start both apps and run `scripts/measure.sh`.
+Typing costs SimpleMapper nothing because macOS does the remapping. Once opened, the window keeps SwiftUI and Metal loaded (~20 MB) until relaunch. Run `scripts/measure.sh` to compare on your Mac.
 
 ## FAQ
 
-**Can I use it together with Karabiner-Elements?**
-Not at the same time. Karabiner seizes keyboards, so `hidutil` mappings have no effect while it runs. Quit Karabiner-Elements first.
+**Can I use it with Karabiner-Elements?**
+Not at the same time: Karabiner seizes keyboards, so quit it first.
 
 **My ISO keyboard's section sign and backtick keys are swapped.**
-On ISO keyboards macOS may swap `non_us_backslash` and `grave_accent_and_tilde`. Use Detect key to see what a key really sends.
-
-**Does it need Accessibility permission?**
-No. Only Detect key needs Input Monitoring, asked the first time you use it.
-
-**macOS asked for access to iCloud Drive, or iCloud Drive is off.**
-Allow it to get the iCloud copy. If you deny it or iCloud Drive is off, SimpleMapper keeps working with the local settings file only.
+macOS may swap `non_us_backslash` and `grave_accent_and_tilde` on ISO keyboards. Use Detect key to see what a key sends.
 
 **Does it reset other tools' mappings?**
-Yes. Applying or clearing mappings replaces any `UserKeyMapping` set by other tools or by hand with `hidutil`.
+Yes, it replaces any `UserKeyMapping` set by other tools or by hand.
 
 **How do I uninstall it?**
-Choose Quit, then Sure to quit, from the menu bar menu (this clears the mappings), and delete SimpleMapper from `/Applications`. Optionally delete `~/Library/Application Support/SimpleMapper` and `~/Library/Mobile Documents/com~apple~CloudDocs/SimpleMapper`, and run `hidutil property --set '{"UserKeyMapping":[]}'` to be sure nothing is left.
+Quit from the menu bar menu (this clears the mappings) and delete the app. Optionally delete `~/Library/Application Support/SimpleMapper` and `iCloud Drive/SimpleMapper`.
 
 ## Development
 
@@ -122,19 +78,10 @@ Choose Quit, then Sure to quit, from the menu bar menu (this clears the mappings
 brew install xcodegen
 scripts/dev.sh                # generate the project, build Debug, launch
 xcodebuild test -project SimpleMapper.xcodeproj -scheme SimpleMapper
-scripts/measure.sh            # RAM and CPU vs Karabiner-Elements
-scripts/screenshots.sh        # README screenshots
+scripts/screenshots.sh        # README screenshots (Debug demo mode, never touches your settings)
 ```
 
-`scripts/screenshots.sh` runs a Debug-only demo mode that never touches your settings or keyboard. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, tests and code layout.
-
-## Contributing
-
-Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first.
-
-## Releasing
-
-Releases are local and maintainer-only: `/cf-ship`, see [docs/RELEASING.md](docs/RELEASING.md).
+Issues and pull requests are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). Releases are maintainer-only, see [docs/RELEASING.md](docs/RELEASING.md).
 
 ## License
 
