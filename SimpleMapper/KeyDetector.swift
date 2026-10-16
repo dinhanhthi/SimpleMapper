@@ -33,7 +33,7 @@ final class KeyDetector: ObservableObject {
             return
         default:
             IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
-            hint = "Allow SimpleMapper in System Settings > Privacy & Security > Input Monitoring, then click Detect again."
+            permissionDenied = true
             return
         }
 
@@ -50,9 +50,16 @@ final class KeyDetector: ObservableObject {
         }, context)
         IOHIDManagerScheduleWithRunLoop(manager, CFRunLoopGetMain(), CFRunLoopMode.defaultMode.rawValue)
         self.manager = manager
-        guard IOHIDManagerOpen(manager, IOOptionBits(kIOHIDOptionsTypeNone)) == kIOReturnSuccess else {
-            hint = "Quit and relaunch SimpleMapper after granting access, and quit Karabiner-Elements if it is running."
+        let result = IOHIDManagerOpen(manager, IOOptionBits(kIOHIDOptionsTypeNone))
+        guard result == kIOReturnSuccess else {
             stop()
+            if result == kIOReturnNotPermitted {
+                // Listed as allowed, but macOS still blocks this build (a stale grant, e.g. after an update).
+                permissionDenied = true
+                hint = "If SimpleMapper is already allowed, remove it from the list with −, add it again, then relaunch SimpleMapper."
+            } else {
+                hint = "Quit Karabiner-Elements if it is running, then click Detect again (error \(String(format: "0x%x", result)))."
+            }
             return
         }
         isDetecting = true

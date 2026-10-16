@@ -53,7 +53,7 @@ struct NewMappingView: View {
                 Text("Input Monitoring access is needed to detect keys.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Button("Open Settings") { detector.openInputMonitoringSettings() }
+                Button("Grant Access…") { detector.requestAccess() }
                     .controlSize(.small)
             }
             if let hint = detector.hint {
