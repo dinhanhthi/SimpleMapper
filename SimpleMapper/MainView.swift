@@ -298,6 +298,7 @@ struct KeyMenu: View {
     /// The gradient behind a chosen key; "Choose key…" stays plain.
     var tint: KeyCap.Tint = .plain
     let onSelect: (UInt64) -> Void
+    @State private var detecting = false
 
     static func label(_ usage: UInt64) -> String {
         KeyCatalog.key(usage: usage)?.label ?? String(format: "0x%llX", usage)
@@ -305,6 +306,8 @@ struct KeyMenu: View {
 
     var body: some View {
         Menu {
+            Button("Detect auto…") { detecting = true }
+            Divider()
             ForEach(Category.allCases, id: \.self) { category in
                 Menu(category.title) {
                     ForEach(KeyCatalog.all.filter { $0.category == category }) { key in
@@ -332,6 +335,82 @@ struct KeyMenu: View {
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .fixedSize(horizontal: false, vertical: true)
+        .sheet(isPresented: $detecting) { DetectKeyView(onUse: onSelect) }
+    }
+}
+
+/// The sheet of "Detect auto…": detects one key press as soon as it opens, with "Use it", Grant Access and Cancel.
+/// It has its own detector, so the New mapping window's Detect key row stays untouched.
+struct DetectKeyView: View {
+    let onUse: (UInt64) -> Void
+    @StateObject private var detector = KeyDetector()
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Detect key").font(.headline)
+            if detector.isDetecting {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Press any key…")
+                }
+            } else if let detected = detector.detected {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(detected.key?.label ?? KeyMenu.label(detected.usage))
+                        .font(.system(.body, design: .monospaced).weight(.medium))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .modifier(KeyCap())
+                    HStack(spacing: 6) {
+                        if let key = detected.key {
+                            Text(key.name)
+                                .font(.system(.caption, design: .monospaced))
+                            Text("·")
+                        }
+                        Text(detected.device?.name ?? "Unknown keyboard")
+                            .font(.callout)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                    .foregroundStyle(.secondary)
+                }
+            }
+            if detector.permissionDenied && !detector.isDetecting {
+                Text("Input Monitoring access is needed to detect keys.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Button("Grant Access…") { detector.requestAccess() }
+                    .controlSize(.small)
+            }
+            if let hint = detector.hint {
+                Text(hint)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            HStack(spacing: 8) {
+                if !detector.isDetecting {
+                    // After the 10 s timeout, a miss or a grant in System Settings.
+                    Button("Detect again") { detector.start() }
+                }
+                Spacer()
+                // Keys are swallowed while detecting, so Escape only cancels once detection stops.
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Button("Use it") {
+                    guard let usage = detector.detected?.usage else { return }
+                    onUse(usage)
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(detector.detected == nil)
+            }
+            .buttonBorderShape(.capsule)
+        }
+        .padding(20)
+        .frame(width: 340)
+        .onAppear { detector.start() }
+        .onDisappear { detector.stop() }
     }
 }
 
