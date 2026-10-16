@@ -1,0 +1,15 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>SimpleMapper</title>
+        <item>
+            <title>1.0.0</title>
+            <pubDate>Fri, 16 Oct 2026 11:31:09 +0200</pubDate>
+            <sparkle:fullReleaseNotesLink>https://github.com/dinhanhthi/SimpleMapper/releases</sparkle:fullReleaseNotesLink>
+            <sparkle:version>1</sparkle:version>
+            <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/dinhanhthi/SimpleMapper/releases/download/v1.0.0/SimpleMapper-1.0.0.zip" length="3842608" type="application/octet-stream" sparkle:edSignature="m5ySdcRmBjRAfZVRLfdIdQUCb6fuAm40FJj5G+Q1Crw2xRjhdlhFkuM/4SAmJO9+zDSBq5t1ZLsSo9dDfnLTBA=="/>
+        </item>
+    </channel>
+</rss>
