@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-11-11
+
 ### Changed
 
 - When the menu bar icon is shown and a new version is available, the icon gets a small green download badge and its menu shows "Update to SimpleMapper <version>…" instead of "Update Available…".
