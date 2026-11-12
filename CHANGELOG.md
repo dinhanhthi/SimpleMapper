@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.4] - 2026-11-12
+
+### Changed
+
+- Detect key now shows the modifiers held with the key (for example "⇧⌘3"), with a note that a keyboard shortcut built into one key can't be remapped or turned off on its own. A modifier pressed alone is detected when you release it.
+
 ## [1.1.3] - 2026-11-11
 
 ### Changed
