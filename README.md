@@ -86,7 +86,7 @@ xcodebuild test -project SimpleMapper.xcodeproj -scheme SimpleMapper
 scripts/screenshots.sh        # README screenshots (Debug demo mode, never touches your settings)
 ```
 
-Issues and pull requests are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). Releases are maintainer-only, see [docs/RELEASING.md](docs/RELEASING.md).
+Issues and pull requests are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). Releases are maintainer-only.
 
 ## License
 

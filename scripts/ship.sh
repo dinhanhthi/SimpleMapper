@@ -5,7 +5,7 @@
 # Run this AFTER the version-bump commit (project.yml + CHANGELOG.md) is pushed to main.
 # It chains the three release scripts in sequence with no interactive prompts.
 #
-# Prereqs (one-time — docs/RELEASING.md §0):
+# Prereqs (one-time):
 #   - "Developer ID Application" cert in the login Keychain
 #   - notarytool credential profile (default "simplemapper-notary")
 #   - Sparkle EdDSA key (generate_keys --account SimpleMapper) + SUPublicEDKey in Info.plist
@@ -37,7 +37,7 @@ VERSION="$(git show HEAD:project.yml \
 TAG="v$VERSION"
 if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null \
    || git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
-  echo "error: tag $TAG already exists; resume with /cf-ship (Resume) or see docs/RELEASING.md §2" >&2
+  echo "error: tag $TAG already exists; resume with /cf-ship (Resume)" >&2
   exit 1
 fi
 

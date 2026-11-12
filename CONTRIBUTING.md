@@ -103,7 +103,7 @@ One-line conventional commits: `<type>(<scope>): <summary>`, for example `fix(re
 
 ## Releases
 
-Releases are maintainer-only: see [docs/RELEASING.md](docs/RELEASING.md).
+Releases are maintainer-only.
 
 ## License
 

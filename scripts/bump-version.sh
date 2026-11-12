@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# bump-version.sh — Bump SimpleMapper's version for a release (docs/RELEASING.md §1).
+# bump-version.sh — Bump SimpleMapper's version for a release.
 #
 # Edits the two version settings in project.yml (the XcodeGen source of truth):
 #   MARKETING_VERSION       -> CFBundleShortVersionString (user-facing)

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# build-and-notarize.sh — Build → sign → notarize → staple a release locally (docs/RELEASING.md §1).
+# build-and-notarize.sh — Build → sign → notarize → staple a release locally.
 #
 # Releases are built locally only (there is no CI release workflow).
 #
@@ -10,7 +10,7 @@
 # Then hand the .zip to scripts/publish-release.sh to tag + create the GitHub Release
 # (scripts/ship.sh runs the whole chain).
 #
-# Prereqs (one-time — see docs/RELEASING.md §0):
+# Prereqs (one-time):
 #   - "Developer ID Application" cert in the login Keychain
 #   - notarytool credential profile (default "simplemapper-notary")
 #   - Sparkle EdDSA public key pasted into SUPublicEDKey (SimpleMapper/Info.plist)
@@ -57,7 +57,7 @@ notarize() {  # $1 = file to submit (zip or dmg)
 # --- 0. Tools & prereqs (all before the slow archive) -----------------------
 command -v xcodebuild >/dev/null || { echo "error: xcodebuild not found" >&2; exit 1; }
 command -v xcodegen >/dev/null \
-  || { echo "error: xcodegen not found — brew install xcodegen (docs/RELEASING.md §0)." >&2; exit 1; }
+  || { echo "error: xcodegen not found — brew install xcodegen." >&2; exit 1; }
 [[ -f project.yml && -f "$INFO_PLIST" ]] \
   || { echo "error: project.yml / $INFO_PLIST not found — run from the SimpleMapper repo" >&2; exit 1; }
 
@@ -67,13 +67,13 @@ XCODE_VER="$(xcodebuild -version | sed -n '1s/^Xcode //p')"
 XCODE_MAJOR="${XCODE_VER%%.*}"
 if ! [[ "$XCODE_MAJOR" =~ ^[0-9]+$ ]] || (( XCODE_MAJOR < 26 )); then
   echo "error: Xcode 26+ required to compile the .icon app icon (have ${XCODE_VER:-unknown})." >&2
-  echo "       sudo xcode-select -s /Applications/Xcode.app   (docs/RELEASING.md §0)" >&2
+  echo "       sudo xcode-select -s /Applications/Xcode.app" >&2
   exit 1
 fi
 
 security find-identity -v -p codesigning | grep -q "Developer ID Application" \
   || { echo "error: no 'Developer ID Application' identity in the keychain." >&2
-       echo "       Create it in Xcode › Settings › Accounts › Manage Certificates (docs/RELEASING.md §0)." >&2
+       echo "       Create it in Xcode › Settings › Accounts › Manage Certificates." >&2
        exit 1; }
 
 # Sparkle refuses unsigned updates: an empty SUPublicEDKey would ship an app that can never
@@ -81,20 +81,19 @@ security find-identity -v -p codesigning | grep -q "Developer ID Application" \
 ED_KEY="$(/usr/libexec/PlistBuddy -c "Print :SUPublicEDKey" "$INFO_PLIST" 2>/dev/null | tr -d '[:space:]' || true)"
 [[ -n "$ED_KEY" ]] \
   || { echo "error: SUPublicEDKey is empty in $INFO_PLIST — Sparkle could never verify an update." >&2
-       echo "       Run Sparkle's generate_keys --account SimpleMapper and paste the public key (docs/RELEASING.md §0)." >&2
+       echo "       Run Sparkle's generate_keys --account SimpleMapper and paste the public key." >&2
        exit 1; }
 
 FEED_URL="$(/usr/libexec/PlistBuddy -c "Print :SUFeedURL" "$INFO_PLIST" 2>/dev/null | tr -d '[:space:]' || true)"
 [[ "$FEED_URL" == https://* ]] \
   || { echo "error: SUFeedURL in $INFO_PLIST is '${FEED_URL:-unset}', expected an https:// URL." >&2
-       echo "       Point it at the GitHub Pages appcast (docs/RELEASING.md §0)." >&2
+       echo "       Point it at the GitHub Pages appcast." >&2
        exit 1; }
 
 xcrun notarytool history --keychain-profile "$PROFILE" >/dev/null 2>&1 \
   || { echo "error: notarytool credential profile '$PROFILE' is missing or invalid." >&2
        echo "       Create it: xcrun notarytool store-credentials simplemapper-notary --apple-id <id> --team-id 86H6CNLN4C" >&2
        echo "       or reuse a profile of the same team: SIMPLEMAPPER_NOTARY_PROFILE=<profile-name> scripts/build-and-notarize.sh" >&2
-       echo "       (docs/RELEASING.md §0)" >&2
        exit 1; }
 
 # --- 1. Generate the project and guard its Release settings ----------------
