@@ -6,6 +6,22 @@ struct DetectedKey {
     let usage: UInt64
     let key: Key?
     let device: KeyboardDevice?
+    /// Modifier usages held when the key was pressed (a keyboard's built-in shortcut sends them with the key).
+    var modifiers: [UInt64] = []
+
+    /// The held modifiers as symbols in macOS order (⌃⌥⇧⌘), left and right alike.
+    var modifierSymbols: String {
+        let ids = Set(modifiers.map { $0 & 0xFFFF_FFFF })
+        let symbols: [(left: UInt64, right: UInt64, symbol: String)] = [
+            (0xE0, 0xE4, "⌃"), (0xE2, 0xE6, "⌥"), (0xE1, 0xE5, "⇧"), (0xE3, 0xE7, "⌘"),
+        ]
+        return symbols.filter { ids.contains($0.left) || ids.contains($0.right) }.map(\.symbol).joined()
+    }
+
+    /// The key's label after its held modifiers, e.g. "⇧⌘3".
+    var label: String {
+        modifierSymbols + (key?.label ?? KeyMenu.label(usage))
+    }
 }
 
 /// Detects one raw key press with a separate IOHIDManager, opened (never seized) only while detecting.
@@ -19,11 +35,16 @@ final class KeyDetector: ObservableObject {
     private var manager: IOHIDManager?
     private var eventMonitor: Any?
     private var timeoutTask: Task<Void, Never>?
+    /// Modifiers pressed since Detect started, in press order, and whether a key already ended the detection.
+    private var heldModifiers: [UInt64] = []
+    private var keyPressed = false
 
     func start() {
         guard !isDetecting else { return }
         detected = nil
         hint = nil
+        heldModifiers = []
+        keyPressed = false
         permissionDenied = false
         switch IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) {
         case kIOHIDAccessTypeGranted:
@@ -113,7 +134,8 @@ final class KeyDetector: ObservableObject {
     }
 
     private func handle(_ value: IOHIDValue) {
-        guard isDetecting, IOHIDValueGetIntegerValue(value) == 1 else { return }
+        guard isDetecting else { return }
+        let pressed = IOHIDValueGetIntegerValue(value) == 1
         let element = IOHIDValueGetElement(value)
         // Combo receivers expose pointer axes on the keyboard interface; a mouse move is not a key press.
         guard !IOHIDElementIsRelative(element) else { return }
@@ -125,13 +147,42 @@ final class KeyDetector: ObservableObject {
         // Karabiner's virtual keyboard re-emits the keys it seizes.
         let name = IOHIDDeviceGetProperty(device, kIOHIDProductKey as CFString) as? String ?? ""
         guard !name.contains("Karabiner") else { return }
-        // Stop on the first key press of any page; defer stop() since it releases the manager running this callback.
+        // A modifier counts only when released with no other key pressed; until then it is held for a combination.
+        if page == 0x07, (0xE0...0xE7).contains(rawUsage) {
+            let usage = UInt64(page) << 32 | UInt64(rawUsage)
+            if pressed {
+                if !heldModifiers.contains(usage) { heldModifiers.append(usage) }
+            } else if !keyPressed, heldModifiers.contains(usage) {
+                keyPressed = true
+                finish(page: page, usage: rawUsage, device: device)
+            }
+            return
+        }
+        guard pressed, !keyPressed else { return }
+        // The first other key press of any page ends the detection. Wait a moment: a keyboard can report the
+        // modifiers of a built-in shortcut after the key.
+        keyPressed = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            self?.finish(page: page, usage: rawUsage, device: device)
+        }
+    }
+
+    private func finish(page: UInt32, usage rawUsage: UInt32, device: IOHIDDevice) {
+        guard isDetecting else { return }
+        // Defer stop() since it releases the manager that may be running the callback.
         isDetecting = false
         DispatchQueue.main.async { [weak self] in self?.stop() }
         guard let usage = Self.acceptedUsage(page: page, usage: rawUsage) else {
             hint = "That key can't be remapped by SimpleMapper. Try another key."
             return
         }
-        detected = DetectedKey(usage: usage, key: KeyCatalog.key(usage: usage), device: KeyboardDevice.keyboard(device))
+        let detected = DetectedKey(usage: usage, key: KeyCatalog.key(usage: usage), device: KeyboardDevice.keyboard(device),
+                                   modifiers: heldModifiers.filter { $0 != usage })
+        if !detected.modifiers.isEmpty, let key = detected.key {
+            hint = "Pressed with \(detected.modifierSymbols) held. If this one key sends the whole combination by itself "
+                + "(a shortcut built into the keyboard), SimpleMapper can't remap or turn it off alone: it only sees "
+                + "\(key.label), and remapping that changes every \(key.label) press."
+        }
+        self.detected = detected
     }
 }

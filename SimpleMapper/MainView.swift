@@ -377,7 +377,7 @@ struct DetectKeyView: View {
                 }
             } else if let detected = detector.detected {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(detected.key?.label ?? KeyMenu.label(detected.usage))
+                    Text(detected.label)
                         .font(.system(.body, design: .monospaced).weight(.medium))
                         .lineLimit(1)
                         .truncationMode(.tail)

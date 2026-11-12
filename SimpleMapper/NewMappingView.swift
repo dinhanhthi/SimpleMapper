@@ -25,7 +25,7 @@ struct NewMappingView: View {
             if let detected = detector.detected, !detector.isDetecting {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 6) {
-                        Text(detected.key?.label ?? KeyMenu.label(detected.usage))
+                        Text(detected.label)
                             .font(.system(.body, design: .monospaced).weight(.medium))
                             .modifier(KeyCap())
                         if let key = detected.key {
