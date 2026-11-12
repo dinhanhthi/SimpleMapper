@@ -4,14 +4,10 @@
 
 # SimpleMapper
 
-**A lightweight key remapper for macOS, a simple alternative to Karabiner-Elements.**
+A lightweight key remapper for macOS, a simple alternative to Karabiner-Elements.
 
-[![Latest release](https://img.shields.io/github/v/release/dinhanhthi/SimpleMapper)](https://github.com/dinhanhthi/SimpleMapper/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/dinhanhthi/SimpleMapper/total)](https://github.com/dinhanhthi/SimpleMapper/releases)
-![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
-[![License: MIT](https://img.shields.io/github/license/dinhanhthi/SimpleMapper)](LICENSE)
-
-### [Download for macOS](https://github.com/dinhanhthi/SimpleMapper/releases/latest)
+[![Download](https://img.shields.io/badge/Download-macOS-black?style=for-the-badge&logo=apple)](https://github.com/dinhanhthi/SimpleMapper/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/main-dark.png">
